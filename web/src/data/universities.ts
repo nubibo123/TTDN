@@ -1,0 +1,176 @@
+import { University } from '@/types'
+
+export const universities: University[] = [
+  {
+    id: 'KHA',
+    code: 'KHA',
+    name: 'Đại học Kinh tế Quốc dân',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'KHA-7220201', name: 'Ngôn ngữ Anh (hệ số 2)', code: '7220201', subjectGroup: 'D01', score: 36.5, note: '', url: '#' },
+      { id: 'KHA-7310101-1', name: 'Kinh tế học', code: '7310101_1', subjectGroup: 'A00', score: 27.1, note: '', url: '#' },
+      { id: 'KHA-7310101-2', name: 'Kinh tế và Quản lý đô thị', code: '7310101_2', subjectGroup: 'A00', score: 27.05, note: '', url: '#' },
+      { id: 'KHA-7310107', name: 'Thống kê kinh tế (Toán hệ số 2)', code: '7310107', subjectGroup: 'A00', score: 36.2, note: '', url: '#' },
+      { id: 'KHA-7310108', name: 'Toán kinh tế (Toán hệ số 2)', code: '7310108', subjectGroup: 'A00', score: 35.95, note: '', url: '#' },
+      { id: 'KHA-7480101', name: 'Khoa học máy tính (Toán hệ số 2)', code: '7480101', subjectGroup: 'A00', score: 35.35, note: '', url: '#' },
+      { id: 'KHA-7480201', name: 'Công nghệ thông tin (Toán hệ số 2)', code: '7480201', subjectGroup: 'A00', score: 35.3, note: '', url: '#' },
+      { id: 'KHA-7340101', name: 'Quản trị kinh doanh', code: '7340101', subjectGroup: 'A00', score: 27.25, note: '', url: '#' },
+      { id: 'KHA-7340115', name: 'Marketing', code: '7340115', subjectGroup: 'A00', score: 27.55, note: '', url: '#' },
+      { id: 'KHA-7340301', name: 'Kế toán', code: '7340301', subjectGroup: 'A00', score: 27.05, note: '', url: '#' },
+      { id: 'KHA-7380101', name: 'Luật', code: '7380101', subjectGroup: 'A00', score: 26.6, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'HUST',
+    code: 'HUST',
+    name: 'Đại học Bách khoa Hà Nội',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'HUST-7480101', name: 'Khoa học máy tính', code: '7480101', subjectGroup: 'A00', score: 38.75, note: 'Toán hệ số 2', url: '#' },
+      { id: 'HUST-7480201', name: 'Công nghệ thông tin', code: '7480201', subjectGroup: 'A00', score: 38.5, note: 'Toán hệ số 2', url: '#' },
+      { id: 'HUST-7510301', name: 'Kỹ thuật điện', code: '7510301', subjectGroup: 'A00', score: 29.0, note: '', url: '#' },
+      { id: 'HUST-7520101', name: 'Kỹ thuật cơ khí', code: '7520101', subjectGroup: 'A00', score: 27.5, note: '', url: '#' },
+      { id: 'HUST-7520118', name: 'Kỹ thuật ô tô', code: '7520118', subjectGroup: 'A00', score: 27.0, note: '', url: '#' },
+      { id: 'HUST-7440301', name: 'Kỹ thuật hạ tầng', code: '7440301', subjectGroup: 'A00', score: 26.0, note: '', url: '#' },
+      { id: 'HUST-7460101', name: 'Kỹ thuật hóa học', code: '7460101', subjectGroup: 'A00', score: 27.25, note: '', url: '#' },
+      { id: 'HUST-7470101', name: 'Kỹ thuật vật liệu', code: '7470101', subjectGroup: 'A00', score: 26.0, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'VJU',
+    code: 'VJU',
+    name: 'Đại học Quốc tế - ĐHQG Hà Nội',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'VJU-7480101', name: 'Khoa học máy tính', code: '7480101', subjectGroup: 'A00', score: 34.0, note: '', url: '#' },
+      { id: 'VJU-7340101', name: 'Quản trị kinh doanh', code: '7340101', subjectGroup: 'D01', score: 28.5, note: '', url: '#' },
+      { id: 'VJU-7810103', name: 'Kinh doanh nông nghiệp', code: '7810103', subjectGroup: 'A00', score: 22.0, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'FTU',
+    code: 'FTU',
+    name: 'Đại học Ngoại thương',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'FTU-7340101', name: 'Quản trị kinh doanh', code: '7340101', subjectGroup: 'D01', score: 37.0, note: 'Tiếng Anh hệ số 2', url: '#' },
+      { id: 'FTU-7310201', name: 'Tài chính - Ngân hàng', code: '7310201', subjectGroup: 'D01', score: 36.0, note: 'Tiếng Anh hệ số 2', url: '#' },
+      { id: 'FTU-7340201', name: 'Kinh doanh quốc tế', code: '7340201', subjectGroup: 'D01', score: 37.5, note: 'Tiếng Anh hệ số 2', url: '#' },
+      { id: 'FTU-7220201', name: 'Ngôn ngữ Anh', code: '7220201', subjectGroup: 'D01', score: 35.0, note: 'Tiếng Anh hệ số 2', url: '#' },
+      { id: 'FTU-7310601', name: 'Kinh tế đối ngoại', code: '7310601', subjectGroup: 'D01', score: 36.5, note: 'Tiếng Anh hệ số 2', url: '#' },
+    ],
+  },
+  {
+    id: 'VNU-FASS',
+    code: 'VNU-FASS',
+    name: 'Đại học Khoa học Xã hội và Nhân văn - ĐHQG TP.HCM',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'VNU-FASS-7310630', name: 'Xã hội học', code: '7310630', subjectGroup: 'C00', score: 23.0, note: '', url: '#' },
+      { id: 'VNU-FASS-7320101', name: 'Tâm lý học', code: '7320101', subjectGroup: 'C00', score: 25.0, note: '', url: '#' },
+      { id: 'VNU-FASS-7310301', name: 'Luật', code: '7310301', subjectGroup: 'A00', score: 27.0, note: '', url: '#' },
+      { id: 'VNU-FASS-7220201', name: 'Việt Nam học', code: '7220201', subjectGroup: 'D01', score: 26.0, note: '', url: '#' },
+      { id: 'VNU-FASS-7140101', name: 'Sư phạm Ngữ văn', code: '7140101', subjectGroup: 'C00', score: 25.5, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'HMU',
+    code: 'HMU',
+    name: 'Đại học Y Hà Nội',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'HMU-7510201', name: 'Y khoa', code: '7510201', subjectGroup: 'B00', score: 27.5, note: 'Khối B00: Sinh, Hóa, Lý', url: '#' },
+      { id: 'HMU-7510301', name: 'Y học dự phòng', code: '7510301', subjectGroup: 'B00', score: 23.5, note: '', url: '#' },
+      { id: 'HMU-7510701', name: 'Răng - Hàm - Mặt', code: '7510701', subjectGroup: 'B00', score: 26.5, note: '', url: '#' },
+      { id: 'HMU-7510202', name: 'Y học cổ truyền', code: '7510202', subjectGroup: 'B00', score: 23.0, note: '', url: '#' },
+      { id: 'HMU-7510302', name: 'Điều dưỡng', code: '7510302', subjectGroup: 'B00', score: 21.5, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'HCMUS',
+    code: 'HCMUS',
+    name: 'Đại học Khoa học Tự nhiên - ĐHQG TP.HCM',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'HCMUS-7480101', name: 'Khoa học máy tính', code: '7480101', subjectGroup: 'A00', score: 34.5, note: '', url: '#' },
+      { id: 'HCMUS-7460101', name: 'Hóa học', code: '7460101', subjectGroup: 'A00', score: 26.0, note: '', url: '#' },
+      { id: 'HCMUS-7440302', name: 'Khoa học đất', code: '7440302', subjectGroup: 'A00', score: 20.0, note: '', url: '#' },
+      { id: 'HCMUS-7470102', name: 'Công nghệ sinh học', code: '7470102', subjectGroup: 'B00', score: 27.5, note: '', url: '#' },
+      { id: 'HCMUS-7440201', name: 'Khoa học môi trường', code: '7440201', subjectGroup: 'A00', score: 22.0, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'HUP',
+    code: 'HUP',
+    name: 'Đại học Sư phạm Hà Nội',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'HUP-7140101', name: 'Sư phạm Ngữ văn', code: '7140101', subjectGroup: 'C00', score: 25.0, note: '', url: '#' },
+      { id: 'HUP-7140103', name: 'Sư phạm Toán', code: '7140103', subjectGroup: 'A00', score: 27.0, note: '', url: '#' },
+      { id: 'HUP-7140105', name: 'Sư phạm Tiếng Anh', code: '7140105', subjectGroup: 'D01', score: 30.0, note: '', url: '#' },
+      { id: 'HUP-7140201', name: 'Sư phạm Lịch sử', code: '7140201', subjectGroup: 'C00', score: 23.0, note: '', url: '#' },
+      { id: 'HUP-7140109', name: 'Sư phạm Hóa học', code: '7140109', subjectGroup: 'A00', score: 25.0, note: '', url: '#' },
+      { id: 'HUP-7140110', name: 'Sư phạm Sinh học', code: '7140110', subjectGroup: 'B00', score: 25.0, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'UIT',
+    code: 'UIT',
+    name: 'Đại học Công nghệ Thông tin - ĐHQG TP.HCM',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'UIT-7480101', name: 'Khoa học máy tính', code: '7480101', subjectGroup: 'A00', score: 36.0, note: '', url: '#' },
+      { id: 'UIT-7480201', name: 'Công nghệ thông tin', code: '7480201', subjectGroup: 'A00', score: 35.5, note: '', url: '#' },
+      { id: 'UIT-7480205', name: 'Mạng máy tính', code: '7480205', subjectGroup: 'A00', score: 34.5, note: '', url: '#' },
+      { id: 'UIT-7480207', name: 'An toàn thông tin', code: '7480207', subjectGroup: 'A00', score: 34.5, note: '', url: '#' },
+      { id: 'UIT-7480403', name: 'Thiết kế đồ họa', code: '7480403', subjectGroup: 'V00', score: 28.0, note: '', url: '#' },
+    ],
+  },
+  {
+    id: 'UEF',
+    code: 'UEF',
+    name: 'Đại học Kinh tế TP.HCM',
+    year: 2025,
+    method: 'Điểm thi THPT',
+    majors: [
+      { id: 'UEF-7340101', name: 'Quản trị kinh doanh', code: '7340101', subjectGroup: 'A00', score: 24.0, note: '', url: '#' },
+      { id: 'UEF-7340201', name: 'Tài chính - Ngân hàng', code: '7340201', subjectGroup: 'A00', score: 24.0, note: '', url: '#' },
+      { id: 'UEF-7340301', name: 'Kế toán', code: '7340301', subjectGroup: 'A00', score: 24.0, note: '', url: '#' },
+      { id: 'UEF-7340115', name: 'Marketing', code: '7340115', subjectGroup: 'A00', score: 24.0, note: '', url: '#' },
+      { id: 'UEF-7340122', name: 'Thương mại điện tử', code: '7340122', subjectGroup: 'A00', score: 24.0, note: '', url: '#' },
+    ],
+  },
+]
+
+export const allMajors = universities.flatMap((u) => u.majors)
+
+export const subjectGroups = [
+  { value: 'A00', label: 'A00 - Toán, Lý, Hóa' },
+  { value: 'A01', label: 'A01 - Toán, Lý, Anh' },
+  { value: 'B00', label: 'B00 - Toán, Hóa, Sinh' },
+  { value: 'C00', label: 'C00 - Văn, Sử, Địa' },
+  { value: 'D01', label: 'D01 - Toán, Văn, Anh' },
+  { value: 'D07', label: 'D07 - Toán, Hóa, Anh' },
+  { value: 'D09', label: 'D09 - Toán, Sử, Anh' },
+  { value: 'D10', label: 'D10 - Toán, Địa, Anh' },
+  { value: 'V00', label: 'V00 - Vẽ chuyên nghiệp' },
+]
+
+export const years = [2025, 2024, 2023]
+
+export const methods = [
+  'Điểm thi THPT',
+  'Điểm xét tuyển kết hợp',
+  'Điểm DGNL HCM',
+  'Điểm DGNL HN',
+  'Chứng chỉ quốc tế',
+]

@@ -1,0 +1,228 @@
+erDiagram
+    USER {
+        string id PK
+        string email UK
+        string passwordHash
+        string name
+        string avatarUrl
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    USER_ROLE_RECORD {
+        string userId PK, FK
+        string role PK
+        string universityId FK
+        boolean isVerified
+        string bio
+    }
+
+    STUDENT_PROFILE {
+        string id PK
+        string userId UK, FK
+        int graduationYear
+        string province
+        boolean isProfilePublic
+        boolean showGrades
+        boolean allowContact
+        boolean showInForum
+    }
+
+    UNIVERSITY {
+        string id PK
+        string code UK
+        string name
+        string region
+        string type
+        string address
+        string websiteUrl
+        string tuitionRange
+        int hotnessScore
+        boolean isVerified
+        datetime createdAt
+    }
+
+    MAJOR {
+        string id PK
+        string universityId FK
+        string code
+        string name
+        string subjectGroup
+        string description
+        decimal tuitionMin
+        decimal tuitionMax
+        string_array careerPaths
+        boolean isActive
+    }
+
+    MAJOR_CATEGORY {
+        string id PK
+        string name
+        string slug UK
+    }
+
+    ADMISSION_SCORE {
+        string id PK
+        string majorId FK
+        int year
+        string method
+        decimal score
+        string note
+        string url
+    }
+
+    TRANSCRIPT {
+        string id PK
+        string studentId FK
+        string semester
+        int year
+        json scores
+        decimal avgScore
+        boolean isDraft
+        string imageUrl
+        string ocrText
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    PERSONALITY_QUIZ {
+        string id PK
+        string studentId UK, FK
+        json answers
+        string_array topCategories
+        json recommendations
+        datetime createdAt
+    }
+
+    FORUM_CATEGORY {
+        string id PK
+        string name
+        string slug UK
+        int displayOrder
+    }
+
+    FORUM_THREAD {
+        string id PK
+        string authorId FK
+        string categoryId FK
+        string title
+        string content
+        int viewsCount
+        boolean isPinned
+        boolean isLocked
+        string officialReplyId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    FORUM_POST {
+        string id PK
+        string threadId FK
+        string authorId FK
+        string parentId FK
+        string content
+        int likesCount
+        boolean isOfficialReply
+        boolean isDeleted
+        datetime createdAt
+    }
+
+    POST_LIKE {
+        string postId PK, FK
+        string userId PK, FK
+        datetime createdAt
+    }
+
+    ADVISOR {
+        string id PK
+        string userId UK, FK
+        string universityId FK
+        string title
+        string bio
+    }
+
+    CONSULTATION {
+        string id PK
+        string studentId FK
+        string advisorId FK
+        string topic
+        string message
+        string status
+        datetime createdAt
+    }
+
+    CONSULTATION_MESSAGE {
+        string id PK
+        string consultationId FK
+        string senderId FK
+        string content
+        boolean isOfficial
+        datetime createdAt
+    }
+
+    SYSTEM_SETTING {
+        string key PK
+        json value
+    }
+
+    ACADEMIC_YEAR {
+        string id PK
+        int year UK
+        boolean isActive
+        datetime createdAt
+    }
+
+    USER ||--o{ USER_ROLE_RECORD : "has roles"
+    USER ||--|| STUDENT_PROFILE : "has one"
+    USER ||--o| ADVISOR : "is advisor"
+    USER ||--o{ FORUM_THREAD : "creates"
+    USER ||--o{ FORUM_POST : "creates"
+    USER ||--o{ TRANSCRIPT : "owns"
+    USER ||--o| PERSONALITY_QUIZ : "has one"
+    USER ||--o{ CONSULTATION : "requests"
+    USER ||--o{ CONSULTATION_MESSAGE : "sends"
+    USER ||--o{ POST_LIKE : "likes"
+
+    USER_ROLE_RECORD }o--|| UNIVERSITY : "verified at"
+
+    STUDENT_PROFILE }o--|| USER : "belongs to"
+    STUDENT_PROFILE }o--|| UNIVERSITY : "graduated from"
+
+    UNIVERSITY ||--o{ MAJOR : "has"
+    UNIVERSITY ||--o{ ADVISOR : "employs"
+    UNIVERSITY ||--o{ USER_ROLE_RECORD : "verifies"
+
+    MAJOR ||--o| MAJOR_CATEGORY : "belongs to"
+    MAJOR ||--o{ ADMISSION_SCORE : "has"
+
+    ADMISSION_SCORE }o--|| MAJOR : "belongs to"
+
+    TRANSCRIPT }o--|| USER : "belongs to"
+
+    PERSONALITY_QUIZ }o--|| USER : "belongs to"
+
+    FORUM_CATEGORY ||--o{ FORUM_THREAD : "contains"
+
+    FORUM_THREAD ||--o{ FORUM_POST : "contains"
+    FORUM_THREAD }o--|| FORUM_CATEGORY : "belongs to"
+    FORUM_THREAD }o--|| USER : "authored by"
+    FORUM_THREAD }o--|| FORUM_POST : "official reply"
+
+    FORUM_POST ||--o{ FORUM_POST : "replies to"
+    FORUM_POST ||--o{ POST_LIKE : "has"
+    FORUM_POST }o--|| USER : "authored by"
+    FORUM_POST }o--|| FORUM_THREAD : "belongs to"
+
+    POST_LIKE }o--|| FORUM_POST : "on post"
+    POST_LIKE }o--|| USER : "by user"
+
+    ADVISOR }o--|| USER : "is"
+    ADVISOR }o--|| UNIVERSITY : "at"
+
+    CONSULTATION }o--|| USER : "student"
+    CONSULTATION }o--o| ADVISOR : "with advisor"
+    CONSULTATION ||--o{ CONSULTATION_MESSAGE : "has"
+
+    CONSULTATION_MESSAGE }o--|| CONSULTATION : "in"
+    CONSULTATION_MESSAGE }o--|| USER : "by"
