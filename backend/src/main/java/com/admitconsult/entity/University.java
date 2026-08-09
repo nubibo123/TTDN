@@ -37,6 +37,7 @@ public class University {
     private UniversityType type = UniversityType.PUBLIC;
 
     private String address;
+
     @Column(name = "website_url")
     private String websiteUrl;
     @Column(name = "tuition_range", columnDefinition = "text")
