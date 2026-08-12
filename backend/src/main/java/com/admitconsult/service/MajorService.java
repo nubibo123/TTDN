@@ -11,6 +11,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class MajorService {
+
     private final MajorRepository majorRepository;
     private final UniversityRepository universityRepository;
 
@@ -23,12 +24,20 @@ public class MajorService {
     }
 
     public Major getMajorById(String id) {
-        return majorRepository.findById(id).orElseThrow(() -> new RuntimeException("Major with id " + id + " not found"));
+        return majorRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Major with id " + id + " not found"));
     }
 
     public Major createMajor(Major major) {
-        Major major = majorRepository.findById(universityId) {
 
-        }
+        // Kiểm tra university có tồn tại không
+        universityRepository.findById(major.getUniversity().getId())
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "University with id " + major.getUniversity().getId() + " not found"
+                        ));
+
+        return majorRepository.save(major);
     }
 }

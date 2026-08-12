@@ -20,7 +20,7 @@ public class AcademicYear {
     private String id;
 
     @Column(unique = true, nullable = false)
-    private Integer year;
+    private String year;
 
     @Column(name = "is_active")
     @Builder.Default

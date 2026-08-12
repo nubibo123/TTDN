@@ -26,6 +26,7 @@ export interface MatchRequest {
   method?: string
   year?: number
   tolerance?: number
+  subjectGroup?: string
 }
 
 export async function postMatch(req: MatchRequest): Promise<MatchResult[]> {
