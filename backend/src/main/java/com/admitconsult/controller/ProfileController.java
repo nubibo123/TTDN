@@ -20,12 +20,12 @@ public class ProfileController {
     public ResponseEntity<ApiResponse<ProfileController.ProfileDto>> getMe(
             @AuthenticationPrincipal UserPrincipal principal) {
         User user = userRepository.findById(principal.getId()).orElse(null);
-        if (user == null) return ResponseEntity.notFound().build();
+        if (user == null)
+            return ResponseEntity.notFound().build();
 
         ProfileDto dto = new ProfileDto(
                 user.getId(), user.getName(), user.getEmail(),
-                user.getAvatarUrl(), user.getIsActive()
-        );
+                user.getAvatarUrl(), user.getIsActive());
         return ResponseEntity.ok(ApiResponse.success(dto));
     }
 

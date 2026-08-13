@@ -108,8 +108,8 @@ export async function fetchApi<T>(path: string, options: RequestOptions = {}): P
 
   let res = await fetch(`${API_BASE}${path}`, fetchOpts)
 
-  // Auto-refresh on 401 (skip for auth endpoints to avoid loops)
-  if (res.status === 401 && !_isRetry && !shouldSkipAuth(path) && token) {
+  // Auto-refresh on 401 or 403 (skip for auth endpoints to avoid loops)
+  if ((res.status === 401 || res.status === 403) && !_isRetry && !shouldSkipAuth(path) && token) {
     const newToken = await refreshAccessToken()
     if (newToken) {
       headers['Authorization'] = `Bearer ${newToken}`
@@ -125,7 +125,16 @@ export async function fetchApi<T>(path: string, options: RequestOptions = {}): P
     }
   }
 
-  const json: ApiResponse<T> = await res.json()
+  const text = await res.text()
+  let json: ApiResponse<T>
+  try {
+    json = text ? JSON.parse(text) : { success: res.ok, message: res.statusText, data: null }
+  } catch {
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText || 'Yêu cầu không thành công'}`)
+    }
+    throw new Error('Phản hồi từ máy chủ không hợp lệ')
+  }
 
   if (!res.ok || !json.success) {
     throw new Error(json.message || `HTTP ${res.status}`)

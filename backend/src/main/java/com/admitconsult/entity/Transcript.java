@@ -61,5 +61,10 @@ public class Transcript {
     @JoinColumn(name = "student_id", insertable = false, updatable = false)
     private User student;
 
-    public enum TranscriptSemester { HK1_L12, HK2_L12, GRADUATION_EXAM }
+    public enum TranscriptSemester {
+        HK1_L10, HK2_L10,
+        HK1_L11, HK2_L11,
+        HK1_L12, HK2_L12,
+        GRADUATION_EXAM
+    }
 }

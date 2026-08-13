@@ -10,5 +10,7 @@ import java.util.Optional;
 @Repository
 public interface TranscriptRepository extends JpaRepository<Transcript, String> {
     List<Transcript> findByStudentId(String studentId);
+    List<Transcript> findByStudentIdOrderByYearAsc(String studentId);
     Optional<Transcript> findByStudentIdAndSemesterAndYear(String studentId, Transcript.TranscriptSemester semester, Integer year);
+    Optional<Transcript> findByIdAndStudentId(String id, String studentId);
 }

@@ -179,7 +179,7 @@ export async function extractScoresFromImage(
     // Network / abort / proxy error — fall back to demo if allowed, else rethrow with friendly message.
     if (allowDemoFallback) {
       const parsed = demoScores({ semester1: EMPTY(), semester2: EMPTY() })
-      (parsed as ExtractedScores & { _fallbackReason: string })._fallbackReason =
+      ;(parsed as ExtractedScores & { _fallbackReason: string })._fallbackReason =
         err instanceof Error ? err.message : 'network_error'
       return parsed
     }
