@@ -74,12 +74,7 @@ public class MatchService {
         String upperReq = requestedSubjectGroup.trim().toUpperCase();
         boolean match = Stream.of(majorGroup.toUpperCase().split(";"))
             .map(String::trim)
-            .anyMatch(part -> {
-              if (part.equals(upperReq)) return true;
-              if (part.startsWith(upperReq)) return true;
-              if (upperReq.startsWith(part)) return true;
-              return false;
-            });
+            .anyMatch(part -> part.equals(upperReq));
         if (!match) continue;
       } else {
         if (!methodMatchesSubjectGroup(methodUnaccented, majorGroup)) continue;

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { getLikelihood } from '@/lib/utils'
-import { getUniversities, getMajors, postMatch, type MatchResult, type Major } from '@/lib/universities'
+import { getMajors, postMatch, type MatchResult, type Major } from '@/lib/universities'
 import { SUBJECT_COMBINATIONS } from '@/data/subjectCombinations'
 import BlurReveal from '@/components/BlurReveal'
 
@@ -40,22 +40,14 @@ interface ExpandedMajors {
 }
 
 export default function ScoreComparisonPage() {
-const [scoreInput, setScoreInput] = useState({
-  math: '',
-  physics: '',
-  chemistry: '',
-  literature: '',
-  english: '',
-  biology: '',
-  history: '',
-  geography: '',
-  gdcd: '',
+const [scoreInput, setScoreInput] = useState<Record<string, string>>({
+  math: '', physics: '', chemistry: '', literature: '', english: '',
+  biology: '', history: '', geography: '', gdcd: '',
+  french: '', chinese: '', japanese: '', russian: '', german: '', korean: '',
+  nk_tdtt: '', nk_ve: '', nk_am_nhac: '', nk_thuyet_trinh: '', nk_khac: '',
 })
-  const [compareList, setCompareList] = useState<CompareItem[]>([])
-  const [showPicker, setShowPicker] = useState(false)
-  const [pickerUniversities, setPickerUniversities] = useState<UniversityLite[]>([])
-  const [pickerLoading, setPickerLoading] = useState(false)
-  const [matchResults, setMatchResults] = useState<MatchResult[]>([])
+const [compareList, setCompareList] = useState<CompareItem[]>([])
+const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [matchLoading, setMatchLoading] = useState(false)
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [uniPage, setUniPage] = useState(0)
@@ -67,20 +59,102 @@ const [majorSearchQuery, setMajorSearchQuery] = useState('')
 const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
   const UNIS_PER_PAGE = 5
 
+  const EMPTY_SCORES: Record<string, string> = {
+    math: '', physics: '', chemistry: '', literature: '', english: '',
+    biology: '', history: '', geography: '', gdcd: '',
+    french: '', chinese: '', japanese: '', russian: '', german: '', korean: '',
+    nk_tdtt: '', nk_ve: '', nk_am_nhac: '', nk_thuyet_trinh: '', nk_khac: '',
+  }
+
+  const handleSelectGroup = (code: string) => {
+    setSelectedGroup(code)
+    setScoreInput({ ...EMPTY_SCORES })
+    setShowGroupModal(false)
+    setGroupSearchQuery('')
+  }
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const totalScore = (() => {
-    const math = parseFloat(scoreInput.math) || 0
-    const lit = parseFloat(scoreInput.literature) || 0
-    const eng = parseFloat(scoreInput.english) || 0
-    const phy = parseFloat(scoreInput.physics) || 0
-    const chem = parseFloat(scoreInput.chemistry) || 0
+const SUBJECT_TO_KEY: Record<string, string | null> = {
+  'Toán': 'math',
+  'Vật lí': 'physics',
+  'Hóa học': 'chemistry',
+  'Ngữ văn': 'literature',
+  'Tiếng Anh': 'english',
+  'Sinh học': 'biology',
+  'Lịch sử': 'history',
+  'Địa lí': 'geography',
+  'GDKTPL': 'gdcd',
+  'Tiếng Pháp': 'french',
+  'Tiếng Trung': 'chinese',
+  'Tiếng Nhật': 'japanese',
+  'Tiếng Nga': 'russian',
+  'Tiếng Đức': 'german',
+  'Tiếng Hàn': 'korean',
+  'Tin học': 'math',
+  'Công nghệ công nghiệp': 'math',
+  'Công nghệ nông nghiệp': 'math',
+  'Năng khiếu TDTT': 'nk_tdtt',
+  'Năng khiếu vẽ Nghệ thuật 1': 'nk_ve',
+  'Năng khiếu vẽ Nghệ thuật 2': 'nk_ve',
+  'Đọc diễn cảm': 'math',
+  'Hát': 'math',
+  'Năng khiếu SKĐA 1': 'nk_am_nhac',
+  'Năng khiếu SKĐA 2': 'nk_am_nhac',
+  'xướng âm': 'math',
+  'biểu diễn nghệ thuật': 'math',
+  'Vẽ Hình họa mỹ thuật': 'nk_ve',
+  'Vẽ trang trí màu': 'nk_ve',
+  'Vẽ Năng khiếu': 'nk_ve',
+  'Năng khiếu': 'nk_khac',
+'NK Mầm non 1( kể chuyện, đọc, diễn cảm)': 'math',
+  'NK Mầm non 2 (Hát)': 'math',
+  'Năng khiếu báo chí': 'nk_khac',
+  'Ký xướng âm': 'nk_khac',
+  'Hát hoặc biểu diễn nhạc cụ': 'nk_am_nhac',
+  'Năng khiếu âm nhạc': 'nk_am_nhac',
+  'Năng khiếu thuyết trình': 'nk_thuyet_trinh',
+  'Biểu diễn nghệ thuật': 'nk_khac',
+  'Năng khiếu nghệ thuật': 'nk_khac',
+  'Xây dựng kịch bản sự kiện': 'nk_khac',
+  'Đọc diễn cảm, Hát': 'math',
+  'Đọc kể diễn cảm': 'math',
+  'Hát - Múa': 'math',
+}
 
-    if (selectedGroup === 'A00') return math + phy + chem
-    if (selectedGroup === 'A01') return math + phy + eng
-    if (selectedGroup === 'D01') return math + lit + eng
-    return math + lit + eng
-  })()
+function stripDiacritics(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+}
+
+function scoreKeyFor(subjectName: string): string | null {
+  const trimmed = subjectName.trim()
+  const direct = SUBJECT_TO_KEY[trimmed]
+  if (direct !== undefined) return direct
+  const lowered = trimmed.toLowerCase()
+  const fromLower: string | null = Object.entries(SUBJECT_TO_KEY).find(
+    ([k]) => k.toLowerCase() === lowered
+  )?.[1] ?? null
+  if (fromLower !== null) return fromLower
+  const stripped = stripDiacritics(trimmed).toLowerCase()
+  return Object.entries(SUBJECT_TO_KEY).find(
+    ([k]) => stripDiacritics(k).toLowerCase() === stripped
+  )?.[1] ?? null
+}
+
+const totalScore = (() => {
+  const group = SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup)
+  if (!group) return 0
+  return group.subjects
+    .split(',')
+    .map(s => {
+      const key = scoreKeyFor(s.trim())
+      return key ? (parseFloat(scoreInput[key]) || 0) : 0
+    })
+    .reduce((sum, v) => sum + v, 0)
+})()
 
   const universities = useMemo(() => {
     const region = totalScore >= 22 ? 'SOUTH' : totalScore >= 18 ? 'CENTRAL' : 'NORTH'
@@ -170,41 +244,27 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [initialLoadDone, callMatch, scoreInput, selectedGroup])
+}, [initialLoadDone, callMatch, scoreInput, selectedGroup])
 
-  const loadPickerUniversities = useCallback(async () => {
-    setPickerLoading(true)
-    try {
-      const list = await getUniversities()
-      setPickerUniversities(list)
-    } finally {
-      setPickerLoading(false)
-    }
-  }, [])
-
-  const addToCompare = async (uni: UniversityLite) => {
-    if (compareList.find((c) => c.universityId === uni.id)) {
-      setShowPicker(false)
-      return
-    }
-    setCompareList((prev) => [
-      ...prev,
-      { universityId: uni.id, universityName: uni.name, region: uni.region, type: uni.type, loading: true },
-    ])
-    setShowPicker(false)
-    try {
-      const majors = await getMajors(uni.id)
-      setCompareList((prev) =>
-        prev.map((c) => (c.universityId === uni.id ? { ...c, majors, loading: false } : c)),
-      )
-    } catch {
-      setCompareList((prev) => prev.filter((c) => c.universityId !== uni.id))
-    }
+const addToCompare = async (uni: { universityId: string; universityName: string; region: string; type: string }) => {
+  if (compareList.find((c) => c.universityId === uni.universityId)) return
+  setCompareList((prev) => [
+    ...prev,
+    { universityId: uni.universityId, universityName: uni.universityName, region: uni.region, type: uni.type, loading: true },
+  ])
+  try {
+    const majors = await getMajors(uni.universityId)
+    setCompareList((prev) =>
+      prev.map((c) => (c.universityId === uni.universityId ? { ...c, majors, loading: false } : c)),
+    )
+  } catch {
+    setCompareList((prev) => prev.filter((c) => c.universityId !== uni.universityId))
   }
+}
 
-  const removeFromCompare = (id: string) => {
-    setCompareList((prev) => prev.filter((c) => c.universityId !== id))
-  }
+const removeFromCompare = (id: string) => {
+  setCompareList((prev) => prev.filter((c) => c.universityId !== id))
+}
 
   const LikelihoodIcon = ({ score, target }: { score: number; target: number }) => {
     if (score >= target + 2) return <TrendingUp className="w-5 h-5 text-green-600" />
@@ -234,10 +294,10 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <BlurReveal as="div" className="mb-8" duration={700}>
-        <h1 className="font-display text-4xl font-bold text-navy-800 mb-2">So sánh điểm thi</h1>
-        <p className="text-slate-600">
-          Nhập điểm thi của bạn hoặc điểm học bạ để xem khả năng đậu các trường
-        </p>
+<h1 className="font-display text-4xl font-bold text-navy-800 mb-2">Điểm thi / Học bạ</h1>
+      <p className="text-slate-600">
+        Chọn tổ hợp môn, nhập điểm 3 môn và xem khả năng đậu
+      </p>
       </BlurReveal>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -248,73 +308,68 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
               <CardHeader>
                 <CardTitle>Điểm thi / Học bạ</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { key: 'math', label: 'Toán' },
-                      { key: 'physics', label: 'Lý' },
-                      { key: 'chemistry', label: 'Hóa' },
-                    ].map((s) => (
-                      <div key={s.key}>
-                        <label className="text-xs text-slate-500 block mb-1">{s.label}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          step="0.1"
-                          value={scoreInput[s.key as keyof typeof scoreInput]}
-                          onChange={(e) =>
-                            setScoreInput({ ...scoreInput, [s.key]: e.target.value })
-                          }
-                          className="w-full px-3 py-2 rounded-lg border border-cream-200 bg-white text-center text-navy-800 font-semibold focus:outline-none focus:ring-2 focus:ring-gold-400"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-3">
-                    {[
-                      { key: 'literature', label: 'Văn' },
-                      { key: 'english', label: 'Anh' },
-                      { key: 'biology', label: 'Sinh' },
-                    ].map((s) => (
-                      <div key={s.key} className="flex-1">
-                        <label className="text-xs text-slate-500 block mb-1">{s.label}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          step="0.1"
-                          value={scoreInput[s.key as keyof typeof scoreInput]}
-                          onChange={(e) =>
-                            setScoreInput({ ...scoreInput, [s.key]: e.target.value })
-                          }
-                          className="w-full px-3 py-2 rounded-lg border border-cream-200 bg-white text-center text-navy-800 font-semibold focus:outline-none focus:ring-2 focus:ring-gold-400"
-                        />
-                      </div>
-                    ))}
-                  </div>
+<CardContent>
+  <div className="space-y-4">
+    {(() => {
+      const group = SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup)
+      if (!group) return null
+      const names = group.subjects.split(',').map(s => s.trim())
+      const hasNk = names.some(n => !scoreKeyFor(n))
+      return (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            {names.map((name, i) => {
+              const k = scoreKeyFor(name)
+              if (!k) return null
+              return (
+                <div key={`${selectedGroup}-${i}`}>
+                  <label className="text-xs text-slate-500 block mb-1">{name}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value={scoreInput[k]}
+                    onChange={(e) =>
+                      setScoreInput(prev => ({ ...prev, [k]: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-cream-200 bg-white text-center text-navy-800 font-semibold focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  />
+                </div>
+              )
+            })}
+          </div>
+          {hasNk && (
+            <p className="text-xs text-slate-400 italic">
+              Tổ hợp này có môn năng khiếu — chưa tính vào điểm xét tuyển.
+            </p>
+          )}
+        </>
+      )
+    })()}
 
 <div className="pt-4 border-t border-cream-200 space-y-3">
-  <div
-    className="flex items-center justify-between cursor-pointer group"
-    onClick={() => setShowGroupModal(true)}
-  >
-    <div>
-      <label className="text-sm text-slate-500 block">Khối xét tuyển</label>
-      <p className="text-sm font-semibold text-navy-800">
-        {selectedGroup} — {(SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup)?.subjects) || selectedGroup}
-      </p>
-    </div>
-    <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-navy-800 transition-colors" />
-  </div>
-  <div className="flex justify-between items-center">
-    <span className="text-sm font-medium text-navy-800">Tổng điểm:</span>
-    <span className="font-display text-3xl font-bold text-gold-600">
-      {totalScore.toFixed(2)}
-    </span>
-  </div>
-</div>
+        <div className="flex items-center justify-between cursor-pointer group" onClick={() => setShowGroupModal(true)}>
+          <div>
+            <label className="text-sm text-slate-500 block">Khối xét tuyển</label>
+            <p className="text-sm font-semibold text-navy-800">
+              {selectedGroup} — {SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup)?.subjects || selectedGroup}
+            </p>
+            {SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup) && (
+              <p className="text-xs text-slate-400">
+                {SUBJECT_COMBINATIONS.find(c => c.code === selectedGroup)!.subjects}
+              </p>
+            )}
+          </div>
+          <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-navy-800 transition-colors" />
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-navy-800">Tổng điểm:</span>
+          <span className="font-display text-3xl font-bold text-gold-600">
+            {totalScore.toFixed(2)}
+          </span>
+        </div>
+      </div>
 
 {showGroupModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -345,7 +400,7 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
             .map(c => (
               <button
                 key={c.code}
-                onClick={() => { setSelectedGroup(c.code); setShowGroupModal(false); setGroupSearchQuery('') }}
+                onClick={() => handleSelectGroup(c.code)}
                 className={`w-full text-left p-4 rounded-xl border transition-all ${
                   selectedGroup === c.code
                     ? 'border-gold-400 bg-gold-50'
@@ -366,48 +421,6 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
             </Card>
           </BlurReveal>
 
-          <BlurReveal duration={600} delay={220}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Danh sách so sánh ({compareList.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {compareList.map((item) => (
-                    <div
-                      key={item.universityId}
-                      className="flex items-center justify-between p-3 bg-cream-50 rounded-xl"
-                    >
-                      <span className="text-sm font-medium text-navy-800">
-                        {item.universityName}
-                      </span>
-                      <button
-                        onClick={() => removeFromCompare(item.universityId)}
-                        className="text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {compareList.length === 0 && (
-                    <p className="text-sm text-slate-400 text-center py-4">
-                      Chưa có trường nào. Thêm trường để so sánh.
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      loadPickerUniversities()
-                      setShowPicker(true)
-                    }}
-                  >
-                    <Plus className="w-4 h-4" /> Thêm trường vào so sánh
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </BlurReveal>
         </div>
 
         {/* Right: Results */}
@@ -527,7 +540,7 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
                                                 {result.majorName}
                                               </span>
                                               <Badge variant="default" size="sm">
-                                                {result.subjectGroup.split(';')[0]}
+                                                {result.subjectGroup.split(';').map(g => g.trim()).find(g => g === selectedGroup) ?? result.subjectGroup.split(';')[0]}
                                               </Badge>
                                             </div>
                                             <div className="text-right">
@@ -560,7 +573,7 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
                                                 {result.majorName}
                                               </span>
                                               <Badge variant="default" size="sm">
-                                                {result.subjectGroup.split(';')[0]}
+                                                {result.subjectGroup.split(';').map(g => g.trim()).find(g => g === selectedGroup) ?? result.subjectGroup.split(';')[0]}
                                               </Badge>
                                             </div>
                                             <div className="text-right">
@@ -702,55 +715,8 @@ const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
               </Card>
             </BlurReveal>
           )}
-        </div>
-      </div>
-
-      {/* School picker modal */}
-      {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-navy-900/60" onClick={() => setShowPicker(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-cream-200 flex items-center justify-between">
-              <h3 className="font-display text-xl font-semibold text-navy-800">
-                Thêm trường vào so sánh
-              </h3>
-              <button
-                onClick={() => setShowPicker(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-2">
-              {pickerLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : (
-                pickerUniversities.map((uni) => (
-                  <button
-                    key={uni.id}
-                    onClick={() => addToCompare(uni)}
-                    disabled={compareList.some((c) => c.universityId === uni.id)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all ${
-                      compareList.some((c) => c.universityId === uni.id)
-                        ? 'border-gold-400 bg-gold-50 opacity-60'
-                        : 'border-cream-200 hover:border-navy-600 hover:bg-cream-50'
-                    }`}
-                  >
-                    <p className="font-semibold text-navy-800">{uni.name}</p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {uni.region} • {uni.type}
-                    </p>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+</div>
+</div>
+</div>
+)
 }
