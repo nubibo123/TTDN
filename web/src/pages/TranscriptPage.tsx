@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Upload, Camera, Edit3, Check, X, AlertCircle, TrendingUp, BookOpen, Loader2, RotateCcw, Save, ShieldCheck, LogIn } from 'lucide-react'
+import { Upload, Camera, Edit3, Check, AlertCircle, TrendingUp, BookOpen, Loader2, RotateCcw, Save, ShieldCheck, LogIn } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -99,65 +99,136 @@ function ScoreCell({ value, onChange, editable }: { value: string; onChange: (v:
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1">
-        <input
-          type="number"
-          min="0"
-          max="10"
-          step="0.1"
-          value={localVal}
-          onChange={(e) => setLocalVal(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onChange(localVal)
-              setEditing(false)
-            }
-            if (e.key === 'Escape') {
-              setLocalVal(value)
-              setEditing(false)
-            }
-          }}
-          className="w-16 px-2 py-1 text-sm rounded-lg border border-gold-400 bg-white text-center focus:outline-none"
-          autoFocus
-        />
-        <button
-          onClick={() => {
+      <input
+        type="number"
+        min="0"
+        max="10"
+        step="0.1"
+        value={localVal}
+        onChange={(e) => setLocalVal(e.target.value)}
+        onBlur={() => {
+          onChange(localVal)
+          setEditing(false)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
             onChange(localVal)
             setEditing(false)
-          }}
-          className="text-green-600 hover:text-green-700"
-        >
-          <Check className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => {
+          }
+          if (e.key === 'Escape') {
             setLocalVal(value)
             setEditing(false)
-          }}
-          className="text-red-400 hover:text-red-600"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+          }
+        }}
+        className="w-16 px-2 py-1 text-sm rounded-lg border border-gold-400 bg-white text-center focus:outline-none"
+        autoFocus
+      />
     )
   }
 
   return (
-    <div className="flex items-center gap-1 group">
-      <span className={cn('min-w-[3ch] text-center', value ? 'text-navy-800 font-medium' : 'text-slate-400')}>
-        {value || '—'}
-      </span>
-      <button
-        onClick={() => setEditing(true)}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-gold-600"
-      >
-        <Edit3 className="w-3 h-3" />
-      </button>
+    <button
+      onClick={() => setEditing(true)}
+      className={cn(
+        'min-w-[3ch] text-center text-sm rounded-md px-2 py-1 transition-colors',
+        value ? 'text-navy-800 font-medium hover:bg-cream-100' : 'text-slate-400 hover:bg-cream-100'
+      )}
+    >
+      {value || '—'}
+    </button>
+  )
+}
+
+function TranscriptTable({
+  semester1,
+  semester2,
+  editable,
+  onSemester1Change,
+  onSemester2Change,
+  onResetSemester1,
+  onResetSemester2,
+}: {
+  semester1: Record<SubjectKey, string>
+  semester2: Record<SubjectKey, string>
+  editable: boolean
+  onSemester1Change: (key: SubjectKey, val: string) => void
+  onSemester2Change: (key: SubjectKey, val: string) => void
+  onResetSemester1: () => void
+  onResetSemester2: () => void
+}) {
+  return (
+    <div className="overflow-x-auto -mx-2 px-2">
+      <table className="w-full text-sm border-collapse min-w-[480px]">
+        <thead>
+          <tr className="border-b border-cream-200">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-10">
+              STT
+            </th>
+            <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Môn học
+            </th>
+            <th className="text-center py-3 px-2 text-xs font-semibold text-gold-600 uppercase tracking-wider">
+              Học kỳ 1
+            </th>
+            <th className="text-center py-3 px-2 text-xs font-semibold text-gold-600 uppercase tracking-wider">
+              Học kỳ 2
+            </th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-navy-600 uppercase tracking-wider">
+              TB
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-cream-100">
+          {subjects.map((s, idx) => {
+            const v1 = Number(semester1[s.key])
+            const v2 = Number(semester2[s.key])
+            const vals = [v1, v2].filter((v) => !isNaN(v) && v > 0)
+            const rowAvg = vals.length ? averageScore(vals) : null
+
+            return (
+              <tr key={s.key} className="hover:bg-cream-50/60 transition-colors">
+                <td className="py-2.5 px-3 text-xs text-slate-400 tabular-nums">{idx + 1}</td>
+                <td className="py-2.5 px-3 text-sm font-medium text-navy-800">{s.shortLabel}</td>
+                <td className="py-2.5 px-2 text-center">
+                  <ScoreCell
+                    value={semester1[s.key]}
+                    editable={editable}
+                    onChange={(v) => onSemester1Change(s.key, v)}
+                  />
+                </td>
+                <td className="py-2.5 px-2 text-center">
+                  <ScoreCell
+                    value={semester2[s.key]}
+                    editable={editable}
+                    onChange={(v) => onSemester2Change(s.key, v)}
+                  />
+                </td>
+                <td className="py-2.5 px-3 text-center">
+                  <span
+                    className={cn(
+                      'text-sm font-semibold tabular-nums',
+                      rowAvg ? 'text-navy-800' : 'text-slate-400'
+                    )}
+                  >
+                    {rowAvg ? rowAvg.toFixed(2) : '—'}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
+      {/* Per-semester averages */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+        <AverageBar scores={semester1} label="Điểm TB HKI" color="bg-gold-500" />
+        <AverageBar scores={semester2} label="Điểm TB HKII" color="bg-gold-500" />
+      </div>
     </div>
   )
 }
 
-function ScoreTable({
+function GraduationTable({
   scores,
   editable,
   onChange,
@@ -167,13 +238,33 @@ function ScoreTable({
   onChange: (key: SubjectKey, val: string) => void
 }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
-      {subjects.map((s) => (
-        <div key={s.key} className="flex flex-col gap-1">
-          <span className="text-xs text-slate-500 text-center">{s.shortLabel}</span>
-          <ScoreCell value={scores[s.key]} onChange={(v) => onChange(s.key, v)} editable={editable} />
-        </div>
-      ))}
+    <div className="overflow-x-auto -mx-2 px-2">
+      <table className="w-full text-sm border-collapse min-w-[320px]">
+        <thead>
+          <tr className="border-b border-cream-200">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-10">
+              STT
+            </th>
+            <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Môn thi
+            </th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-navy-600 uppercase tracking-wider">
+              Điểm
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-cream-100">
+          {subjects.map((s, idx) => (
+            <tr key={s.key} className="hover:bg-cream-50/60 transition-colors">
+              <td className="py-2.5 px-3 text-xs text-slate-400 tabular-nums">{idx + 1}</td>
+              <td className="py-2.5 px-3 text-sm font-medium text-navy-800">{s.shortLabel}</td>
+              <td className="py-2.5 px-3">
+                <ScoreCell value={scores[s.key]} editable={editable} onChange={(v) => onChange(s.key, v)} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -601,7 +692,7 @@ export default function TranscriptPage() {
 
       {/* Score tables */}
       <div className="space-y-6">
-        <BlurReveal key={`${activeGrade}-hk1`} duration={600} delay={150}>
+        <BlurReveal key={`${activeGrade}-combined`} duration={600} delay={150}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -610,19 +701,24 @@ export default function TranscriptPage() {
                     <BookOpen className="w-5 h-5 text-gold-600" />
                   </div>
                   <div>
-                    <CardTitle>Học kỳ 1 ({GRADE_LABELS[activeGrade]})</CardTitle>
+                    <CardTitle>Điểm học bạ {GRADE_LABELS[activeGrade]}</CardTitle>
                     <p className="text-sm text-slate-500 font-normal mt-0.5">Nhấn vào ô điểm để nhập hoặc sửa</p>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => resetGradeScores('semester1')}
-                  className="text-slate-400 hover:text-red-500 h-8 px-2 gap-1.5"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span className="text-xs">Reset</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      resetGradeScores('semester1')
+                      resetGradeScores('semester2')
+                    }}
+                    className="text-slate-400 hover:text-red-500 h-8 px-2 gap-1.5"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span className="text-xs">Reset</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -632,65 +728,22 @@ export default function TranscriptPage() {
                   <p className="text-xs">Đang tải điểm từ hệ thống...</p>
                 </div>
               ) : (
-                <>
-                  <ScoreTable
-                    scores={gradeScores.semester1}
-                    editable={editable}
-                    onChange={(k, v) => updateGradeScore('semester1', k, v)}
-                  />
-                  <AverageBar scores={gradeScores.semester1} label="Điểm TB HKI" color="bg-gold-500" />
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </BlurReveal>
-
-        <BlurReveal key={`${activeGrade}-hk2`} duration={600} delay={250}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gold-500/15 rounded-xl flex items-center justify-center">
-                    <BookOpen className="w-5 h-5 text-gold-600" />
-                  </div>
-                  <div>
-                    <CardTitle>Học kỳ 2 ({GRADE_LABELS[activeGrade]})</CardTitle>
-                    <p className="text-sm text-slate-500 font-normal mt-0.5">Nhấn vào ô điểm để nhập hoặc sửa</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => resetGradeScores('semester2')}
-                  className="text-slate-400 hover:text-red-500 h-8 px-2 gap-1.5"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span className="text-xs">Reset</span>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loadingData ? (
-                <div className="py-8 text-center text-slate-400">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-gold-500" />
-                  <p className="text-xs">Đang tải điểm từ hệ thống...</p>
-                </div>
-              ) : (
-                <>
-                  <ScoreTable
-                    scores={gradeScores.semester2}
-                    editable={editable}
-                    onChange={(k, v) => updateGradeScore('semester2', k, v)}
-                  />
-                  <AverageBar scores={gradeScores.semester2} label="Điểm TB HKII" color="bg-gold-500" />
-                </>
+                <TranscriptTable
+                  semester1={gradeScores.semester1}
+                  semester2={gradeScores.semester2}
+                  editable={editable}
+                  onSemester1Change={(k, v) => updateGradeScore('semester1', k, v)}
+                  onSemester2Change={(k, v) => updateGradeScore('semester2', k, v)}
+                  onResetSemester1={() => resetGradeScores('semester1')}
+                  onResetSemester2={() => resetGradeScores('semester2')}
+                />
               )}
             </CardContent>
           </Card>
         </BlurReveal>
 
         {activeGrade === 'grade12' && (
-          <BlurReveal duration={600} delay={350}>
+          <BlurReveal duration={600} delay={250}>
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -706,7 +759,7 @@ export default function TranscriptPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScoreTable scores={scores.graduation} editable={true} onChange={updateGraduation} />
+                <GraduationTable scores={scores.graduation} editable={true} onChange={updateGraduation} />
               </CardContent>
             </Card>
           </BlurReveal>
