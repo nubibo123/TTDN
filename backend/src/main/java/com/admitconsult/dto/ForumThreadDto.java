@@ -18,8 +18,11 @@ public class ForumThreadDto {
     private String title;
     private String content;
     private Integer viewsCount;
+    private Integer likesCount;
     private Boolean isPinned;
     private Boolean isLocked;
     private LocalDateTime createdAt;
     private Integer replyCount;
+    private Boolean isAdvicer;
+    private Boolean likedByMe;
 }

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -132,6 +133,30 @@ public class AuthController {
         }
         cookieService.clearRefreshCookie(httpResponse);
         return ResponseEntity.ok(ApiResponse.success("Logged out"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<AuthMeResponse>> me(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        User user = userRepository.findByIdWithRoles(principal.getId())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        var roles = user.getRoles().stream()
+                .map(r -> r.getRole().name())
+                .toList();
+        AuthMeResponse res = new AuthMeResponse(
+                user.getId(), user.getName(), user.getEmail(),
+                user.getAvatarUrl(), roles);
+        return ResponseEntity.ok(ApiResponse.success(res));
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class AuthMeResponse {
+        private String id;
+        private String name;
+        private String email;
+        private String avatarUrl;
+        private java.util.List<String> roles;
     }
 
     private String clientIp(HttpServletRequest req) {

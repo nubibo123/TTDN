@@ -38,6 +38,10 @@ public class ForumThread {
     @Builder.Default
     private Integer viewsCount = 0;
 
+    @Column(name = "likes_count")
+    @Builder.Default
+    private Integer likesCount = 0;
+
     @Column(name = "is_pinned")
     @Builder.Default
     private Boolean isPinned = false;

@@ -17,22 +17,38 @@ public class ForumCategoryController {
     private final ForumCategoryRepository forumCategoryRepository;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ForumCategory>>> getAll() {
-        List<ForumCategory> list = forumCategoryRepository.findAll();
+    public ResponseEntity<ApiResponse<List<ForumCategoryDto>>> getAll() {
+        List<ForumCategoryDto> list = forumCategoryRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(ForumCategory::getDisplayOrder))
+                .map(this::toDto)
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(list));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ForumCategory>> getById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ForumCategoryDto>> getById(@PathVariable String id) {
         return forumCategoryRepository.findById(id)
-                .map(c -> ResponseEntity.ok(ApiResponse.success(c)))
+                .map(c -> ResponseEntity.ok(ApiResponse.success(toDto(c))))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/slug/{slug}")
-    public ResponseEntity<ApiResponse<ForumCategory>> getBySlug(@PathVariable String slug) {
+    public ResponseEntity<ApiResponse<ForumCategoryDto>> getBySlug(@PathVariable String slug) {
         return forumCategoryRepository.findBySlug(slug)
-                .map(c -> ResponseEntity.ok(ApiResponse.success(c)))
+                .map(c -> ResponseEntity.ok(ApiResponse.success(toDto(c))))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    private ForumCategoryDto toDto(ForumCategory c) {
+        return new ForumCategoryDto(c.getId(), c.getName(), c.getSlug(), c.getDisplayOrder());
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class ForumCategoryDto {
+        private String id;
+        private String name;
+        private String slug;
+        private Integer displayOrder;
     }
 }

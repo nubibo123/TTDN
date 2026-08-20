@@ -19,4 +19,6 @@ public class ForumPostDto {
     private Integer likesCount;
     private Boolean isOfficialReply;
     private LocalDateTime createdAt;
+    private Boolean isAdvicer;
+    private Boolean likedByMe;
 }

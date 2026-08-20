@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
-import { BookOpen, Users, BarChart3, Compass, MessageCircle, Menu, X, ChevronDown, LogOut, UserCircle } from 'lucide-react'
+import { BookOpen, Users, BarChart3, Compass, MessageCircle, Menu, X, ChevronDown, LogOut, UserCircle, Shield } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAuth } from '../lib/authContext'
+import { getAuthMe, type AuthMeResponse } from '../lib/admin'
 
 const navItems = [
   { label: 'Trang chủ', path: '/', icon: BookOpen },
@@ -17,10 +18,23 @@ export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [roles, setRoles] = useState<string[]>([])
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let active = true
+    if (user) {
+      getAuthMe()
+        .then((res: AuthMeResponse) => {
+          if (active) setRoles(res.roles)
+        })
+        .catch(() => {})
+    }
+    return () => { active = false }
+  }, [user])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -102,14 +116,25 @@ export default function MainLayout() {
                   {dropdownOpen && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-cream-200 py-1 z-50"
                       style={{ animation: 'fadeInDown 150ms ease' }}>
-                      <Link
-                        to="/ho-so"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-navy-800 hover:bg-cream-100 transition-colors"
-                      >
-                        <UserCircle className="w-4 h-4 text-slate-400" />
-                        Hồ sơ của tôi
-                      </Link>
+                      {roles.includes('ADMIN') ? (
+                        <Link
+                          to="/quan-tri"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-navy-800 hover:bg-cream-100 transition-colors"
+                        >
+                          <Shield className="w-4 h-4 text-gold-600" />
+                          Quản trị
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/ho-so"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-navy-800 hover:bg-cream-100 transition-colors"
+                        >
+                          <UserCircle className="w-4 h-4 text-slate-400" />
+                          Hồ sơ của tôi
+                        </Link>
+                      )}
                       <div className="my-1 border-t border-cream-200" />
                       <button
                         onClick={handleLogout}
@@ -196,13 +221,23 @@ export default function MainLayout() {
                           <p className="text-xs text-cream-200/60 truncate max-w-[160px]">{user.email}</p>
                         </div>
                       </div>
-                      <Link
-                        to="/ho-so"
-                        onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-cream-100 hover:bg-white/10 rounded-xl transition-colors"
-                      >
-                        <UserCircle className="w-4 h-4" /> Hồ sơ của tôi
-                      </Link>
+                      {roles.includes('ADMIN') ? (
+                        <Link
+                          to="/quan-tri"
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-cream-100 hover:bg-white/10 rounded-xl transition-colors"
+                        >
+                          <Shield className="w-4 h-4" /> Quản trị
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/ho-so"
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-cream-100 hover:bg-white/10 rounded-xl transition-colors"
+                        >
+                          <UserCircle className="w-4 h-4" /> Hồ sơ của tôi
+                        </Link>
+                      )}
                       <button
                         onClick={() => { handleLogout(); setMobileOpen(false) }}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-white/10 rounded-xl transition-colors"

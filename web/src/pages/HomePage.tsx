@@ -146,6 +146,11 @@ export default function HomePage() {
                 Tư vấn ngành học
               </button>
             </Link>
+            <Link to="/dang-ky-tu-van">
+              <button className="px-8 py-3 bg-gold-500 text-navy-900 font-semibold rounded-xl hover:bg-gold-400 transition-all">
+                Đăng ký tư vấn viên
+              </button>
+            </Link>
           </div>
         </div>
       </RevealSection>

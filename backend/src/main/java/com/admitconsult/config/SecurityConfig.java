@@ -38,6 +38,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/advisors/register").permitAll()
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/match").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/universities/**").permitAll()
@@ -45,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/admission-scores/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/forum-categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/forum-threads/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/forum-threads/*/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/forum-posts/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()

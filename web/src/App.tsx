@@ -11,7 +11,8 @@ const UniversityDetailPage = lazy(() => import('./pages/UniversityDetailPage'))
 const ScoreComparisonPage  = lazy(() => import('./pages/ScoreComparisonPage'))
 const MajorAdvicePage      = lazy(() => import('./pages/MajorAdvicePage'))
 const ForumPage            = lazy(() => import('./pages/ForumPage'))
-const StudentProfilePage   = lazy(() => import('./pages/StudentProfilePage'))
+const ForumThreadPage      = lazy(() => import('./pages/ForumThreadPage'))
+const ProfilePage          = lazy(() => import('./pages/ProfilePage'))
 const AdvisorDashboardPage = lazy(() => import('./pages/AdvisorDashboardPage'))
 const AdminDashboardPage   = lazy(() => import('./pages/AdminDashboardPage'))
 const LoginPage            = lazy(() => import('./pages/LoginPage'))
@@ -30,6 +31,7 @@ export default function App() {
       <Routes>
         <Route path="/dang-nhap" element={<LoginPage />} />
         <Route path="/dang-ky" element={<LoginPage initialMode="register" />} />
+        <Route path="/dang-ky-tu-van" element={<LoginPage initialMode="advisor" />} />
         <Route element={<MainLayout />}>
           <Route path="/"            element={<PageShell><HomePage /></PageShell>} />
           <Route path="/diem-hoc-ky" element={<PageShell><TranscriptPage /></PageShell>} />
@@ -38,7 +40,8 @@ export default function App() {
           <Route path="/so-sanh"     element={<PageShell><ScoreComparisonPage /></PageShell>} />
           <Route path="/tu-van-nganh" element={<PageShell><MajorAdvicePage /></PageShell>} />
           <Route path="/cong-dong"   element={<PageShell><ForumPage /></PageShell>} />
-          <Route path="/ho-so"       element={<PageShell><StudentProfilePage /></PageShell>} />
+          <Route path="/cong-dong/:threadId" element={<PageShell><ForumThreadPage /></PageShell>} />
+          <Route path="/ho-so"       element={<PageShell><ProfilePage /></PageShell>} />
         </Route>
         <Route path="/tu-van-vien" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
         <Route path="/quan-tri"    element={<PageShell><AdminDashboardPage /></PageShell>} />

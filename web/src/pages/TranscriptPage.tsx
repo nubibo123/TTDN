@@ -664,7 +664,7 @@ export default function TranscriptPage() {
                   )}
                   <p className="text-xs text-slate-400 mt-2">
                     <AlertCircle className="w-3 h-3 inline mr-1" />
-                    Gemini AI sẽ tự động trích xuất điểm từ hình ảnh. Bạn có thể chỉnh sửa sau khi upload.
+                    Hệ thống sẽ tự động trích xuất điểm từ hình ảnh. Bạn có thể chỉnh sửa sau khi upload.
                   </p>
                 </div>
               ) : (

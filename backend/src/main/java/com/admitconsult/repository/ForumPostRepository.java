@@ -11,4 +11,5 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, String> {
     List<ForumPost> findByThreadIdOrderByCreatedAtAsc(String threadId);
     List<ForumPost> findByAuthorIdOrderByCreatedAtDesc(String authorId);
     List<ForumPost> findByParentIdOrderByCreatedAtAsc(String parentId);
+    long countByThreadIdAndParentIdIsNull(String threadId);
 }
