@@ -194,6 +194,9 @@ const totalScore = (() => {
       literature: number
       english: number
       biology: number
+      history: number
+      geography: number
+      gdcd: number
     }) => {
       setMatchLoading(true)
       try {
@@ -223,6 +226,9 @@ const totalScore = (() => {
         literature: parseFloat(scoreInput.literature) || 0,
         english: parseFloat(scoreInput.english) || 0,
         biology: parseFloat(scoreInput.biology) || 0,
+        history: parseFloat(scoreInput.history) || 0,
+        geography: parseFloat(scoreInput.geography) || 0,
+        gdcd: parseFloat(scoreInput.gdcd) || 0,
       })
       setInitialLoadDone(true)
     }
@@ -239,6 +245,9 @@ const totalScore = (() => {
         literature: parseFloat(scoreInput.literature) || 0,
         english: parseFloat(scoreInput.english) || 0,
         biology: parseFloat(scoreInput.biology) || 0,
+        history: parseFloat(scoreInput.history) || 0,
+        geography: parseFloat(scoreInput.geography) || 0,
+        gdcd: parseFloat(scoreInput.gdcd) || 0,
       })
     }, 400)
     return () => {
@@ -330,9 +339,32 @@ const removeFromCompare = (id: string) => {
                     max="10"
                     step="0.1"
                     value={scoreInput[k]}
-                    onChange={(e) =>
-                      setScoreInput(prev => ({ ...prev, [k]: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw === '') {
+                        setScoreInput(prev => ({ ...prev, [k]: '' }))
+                        return
+                      }
+                      const num = parseFloat(raw)
+                      if (!isNaN(num)) {
+                        if (num > 10) {
+                          setScoreInput(prev => ({ ...prev, [k]: '10' }))
+                        } else if (num < 0) {
+                          setScoreInput(prev => ({ ...prev, [k]: '0' }))
+                        } else {
+                          setScoreInput(prev => ({ ...prev, [k]: raw }))
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const raw = e.target.value
+                      if (raw === '') return
+                      const num = parseFloat(raw)
+                      if (!isNaN(num)) {
+                        const clamped = Math.max(0, Math.min(10, num))
+                        setScoreInput(prev => ({ ...prev, [k]: clamped.toString() }))
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded-lg border border-cream-200 bg-white text-center text-navy-800 font-semibold focus:outline-none focus:ring-2 focus:ring-gold-400"
                   />
                 </div>

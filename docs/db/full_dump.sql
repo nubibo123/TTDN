@@ -206,8 +206,8 @@ CREATE TABLE public.admission_scores (
     year integer NOT NULL,
     method character varying(255) DEFAULT 'Điểm thi THPT'::text NOT NULL,
     score numeric(10,2) NOT NULL,
-    note character varying(255),
-    url character varying(255)
+    note text,
+    url text
 );
 
 

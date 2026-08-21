@@ -95,6 +95,15 @@ function ScoreCell({ value, onChange, editable }: { value: string; onChange: (v:
     setLocalVal(value)
   }, [value])
 
+  const clampScore = (v: string) => {
+    if (v === '') return ''
+    const num = parseFloat(v)
+    if (isNaN(num)) return ''
+    if (num < 0) return '0'
+    if (num > 10) return '10'
+    return v
+  }
+
   if (!editable) return <span className="text-slate-400">—</span>
 
   if (editing) {
@@ -105,14 +114,32 @@ function ScoreCell({ value, onChange, editable }: { value: string; onChange: (v:
         max="10"
         step="0.1"
         value={localVal}
-        onChange={(e) => setLocalVal(e.target.value)}
+        onChange={(e) => {
+          const raw = e.target.value
+          if (raw === '') {
+            setLocalVal('')
+            return
+          }
+          const num = parseFloat(raw)
+          if (!isNaN(num)) {
+            if (num > 10) {
+              setLocalVal('10')
+            } else if (num < 0) {
+              setLocalVal('0')
+            } else {
+              setLocalVal(raw)
+            }
+          }
+        }}
         onBlur={() => {
-          onChange(localVal)
+          const finalVal = clampScore(localVal)
+          onChange(finalVal)
           setEditing(false)
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
-            onChange(localVal)
+            const finalVal = clampScore(localVal)
+            onChange(finalVal)
             setEditing(false)
           }
           if (e.key === 'Escape') {

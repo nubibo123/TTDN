@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tổ hợp môn xét tuyển đại học — Vietnam
  * Source: https://diemthi.tuyensinh247.com/to-hop-mon.html
  * Extracted: 2026-07-21 — auto-generated.  entries.
@@ -258,6 +258,26 @@ export const SUBJECT_COMBINATIONS: readonly SubjectCombination[] = [
   { code: 'DH5', subjects: 'Ngữ văn, Lịch sử, Tiếng Hàn' },
   { code: 'X59', subjects: 'Ngữ văn, Vật lí, Tin học' },
   { code: 'AH4', subjects: 'Toán, Sinh học, Tiếng Hàn' },
+  { code: 'C20', subjects: 'Ngữ văn, Địa lí, GDKTPL' },
+  { code: 'D66', subjects: 'Ngữ văn, GDKTPL, Tiếng Anh' },
+  { code: 'D84', subjects: 'Toán, Ngữ văn, Tiếng Anh' },
+  { code: 'D90', subjects: 'Toán, Khoa học tự nhiên, Tiếng Anh' },
+  { code: 'E01', subjects: 'Ngữ văn, Lịch sử, Tiếng Anh' },
+  { code: 'E02', subjects: 'Ngữ văn, Địa lí, Tiếng Anh' },
+  { code: 'E03', subjects: 'Toán, Ngữ văn, Tiếng Anh' },
+  { code: 'E06', subjects: 'Toán, Vật lí, Tiếng Anh' },
+  { code: 'R26', subjects: 'Ngữ văn, Năng khiếu báo chí, Tiếng Anh' },
+  { code: 'AH6', subjects: 'Toán, Địa lí, Tiếng Hàn' },
+  { code: 'AH7', subjects: 'Toán, GDKTPL, Tiếng Hàn' },
+  { code: 'AH8', subjects: 'Toán, Tin học, Tiếng Hàn' },
+  { code: 'X10', subjects: 'Toán, Hóa học, Tin học' },
+  { code: 'X11', subjects: 'Toán, Hóa học, Công nghệ công nghiệp' },
+  { code: 'X26', subjects: 'Toán, Tiếng Anh, Tin học' },
+  { code: 'X27', subjects: 'Toán, Tiếng Anh, Công nghệ công nghiệp' },
+  { code: 'X28', subjects: 'Toán, Tiếng Anh, Công nghệ nông nghiệp' },
+  { code: 'K01', subjects: 'Toán, Ngữ văn, Khoa học tự nhiên' },
+  { code: 'Q01', subjects: 'Tư duy định lượng, Tư duy định tính, Tiếng Anh' },
+  { code: 'AD0', subjects: 'Toán, Ngữ văn, Tiếng Anh' },
 ] as const
 
 /** Set for O(1) membership tests in filter logic. */
