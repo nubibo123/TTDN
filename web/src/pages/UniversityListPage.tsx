@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, Globe, X, ChevronRight, MapPin,
-  SlidersHorizontal, ChevronDown, GraduationCap
+  SlidersHorizontal, ChevronDown, GraduationCap, Heart
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { getUniversities, getMajors, type University, type Major } from '@/lib/universities'
+import { getUniversities, getMajors, getSavedUniversityIds, toggleSaveUniversity, type University, type Major } from '@/lib/universities'
+import { useAuth } from '@/lib/authContext'
 import { cn } from '@/lib/utils'
 import BlurReveal from '@/components/BlurReveal'
 
@@ -45,11 +46,13 @@ function UniversityCardSkeleton() {
 }
 
 export default function UniversityListPage() {
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [region, setRegion] = useState('')
   const [type, setType] = useState('')
   const [unis, setUnis] = useState<University[]>([])
   const [allMajors, setAllMajors] = useState<Major[]>([])
+  const [savedIds, setSavedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   // Advanced filters state
@@ -63,14 +66,22 @@ export default function UniversityListPage() {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([getUniversities(), getMajors()])
-      .then(([uList, mList]) => {
+    Promise.all([getUniversities(), getMajors(), getSavedUniversityIds()])
+      .then(([uList, mList, sIds]) => {
         setUnis(uList)
         setAllMajors(mList)
+        setSavedIds(sIds)
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [])
+
+  const handleToggleSave = async (universityId: string) => {
+    const isSaved = await toggleSaveUniversity(universityId, Boolean(user))
+    setSavedIds((prev) =>
+      isSaved ? [...prev, universityId] : prev.filter((id) => id !== universityId)
+    )
+  }
 
   // Dynamic lists from data
   const uniqueMajorNames = useMemo(() => {
@@ -443,6 +454,22 @@ export default function UniversityListPage() {
                           <p className="text-xs text-slate-500 mt-2 line-clamp-2">{uni.address}</p>
                         )}
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleToggleSave(uni.id)
+                        }}
+                        className={cn(
+                          'p-2 rounded-full transition-all shrink-0',
+                          savedIds.includes(uni.id)
+                            ? 'text-red-500 bg-red-50 hover:bg-red-100'
+                            : 'text-slate-400 hover:text-slate-600 hover:bg-cream-100'
+                        )}
+                        title={savedIds.includes(uni.id) ? 'Bỏ lưu trường' : 'Lưu trường'}
+                      >
+                        <Heart className={cn('w-5 h-5', savedIds.includes(uni.id) && 'fill-current')} />
+                      </button>
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-cream-200">
                       {uni.isVerified && <Badge variant="default">Đã xác minh</Badge>}

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Globe, BookOpen, Users, Award, GraduationCap, Wallet, Building2, ExternalLink, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, MapPin, Globe, BookOpen, Users, Award, GraduationCap, Wallet, Building2, ExternalLink, DollarSign, ChevronDown, ChevronUp, Heart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
 import UniversityMap from '@/components/UniversityMap'
-import { getLikelihood } from '@/lib/utils'
-import { getUniversityById, type University, type AdmissionScore, type Major } from '@/lib/universities'
+import { getLikelihood, cn } from '@/lib/utils'
+import { getUniversityById, getSavedUniversityIds, toggleSaveUniversity, type University, type AdmissionScore, type Major } from '@/lib/universities'
 import { getMajors, getAdmissionScores } from '@/lib/universities'
+import { useAuth } from '@/lib/authContext'
 import UniversityDetailSkeleton from './UniversityDetailSkeleton'
 
 const INITIAL_MAJOR_COUNT = 8
@@ -16,12 +17,14 @@ const YEARS = [2023, 2024, 2025]
 
 export default function UniversityDetailPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [uni, setUni] = useState<University | null>(null)
   const [majors, setMajors] = useState<Major[]>([])
   const [loading, setLoading] = useState(true)
   const [showAllMajors, setShowAllMajors] = useState(false)
   const [scores, setScores] = useState<Record<string, AdmissionScore[]>>({})
   const [expandedMajor, setExpandedMajor] = useState<string | null>(null)
+  const [isSaved, setIsSaved] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -32,9 +35,11 @@ export default function UniversityDetailPage() {
       getUniversityById(id),
       getMajors(id),
       getAdmissionScores(undefined, undefined, id),
-    ]).then(([u, ms, allScores]) => {
+      getSavedUniversityIds(),
+    ]).then(([u, ms, allScores, savedIds]) => {
       setUni(u)
       setMajors(ms)
+      setIsSaved(savedIds.includes(id))
       const grouped: Record<string, AdmissionScore[]> = {}
       for (const s of allScores) {
         if (!grouped[s.majorId]) grouped[s.majorId] = []
@@ -46,6 +51,12 @@ export default function UniversityDetailPage() {
       setError(true)
     }).finally(() => setLoading(false))
   }, [id])
+
+  const handleToggleSave = async () => {
+    if (!id) return
+    const saved = await toggleSaveUniversity(id, Boolean(user))
+    setIsSaved(saved)
+  }
 
   if (loading) return <UniversityDetailSkeleton />
 
@@ -86,6 +97,17 @@ export default function UniversityDetailPage() {
                 </p>
               )}
             </div>
+            <Button
+              variant="outline"
+              onClick={handleToggleSave}
+              className={cn(
+                'border-cream-100/30 text-cream-50 hover:bg-cream-100/10 gap-2 self-start shrink-0',
+                isSaved && 'bg-red-500/20 text-red-300 border-red-400/50'
+              )}
+            >
+              <Heart className={cn('w-4 h-4', isSaved && 'fill-current text-red-400')} />
+              {isSaved ? 'Đã lưu trường' : 'Lưu trường'}
+            </Button>
           </div>
         </div>
 

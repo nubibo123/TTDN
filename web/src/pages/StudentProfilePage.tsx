@@ -10,6 +10,8 @@ import {
   Loader2,
   MapPin,
   GraduationCap,
+  Heart,
+  ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -18,6 +20,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import BlurReveal from '@/components/BlurReveal'
 import { useAuth } from '@/lib/authContext'
 import { getMyTranscripts, type TranscriptDto } from '@/lib/transcripts'
+import { getSavedUniversities, toggleSaveUniversity, type University } from '@/lib/universities'
 import {
   getMyStudentProfile,
   updateMyStudentProfile,
@@ -97,8 +100,27 @@ export default function StudentProfilePage() {
   const [savingPrivacy, setSavingPrivacy] = useState(false)
   const [privacySaveMsg, setPrivacySaveMsg] = useState('')
 
+  const [savedUnis, setSavedUnis] = useState<University[]>([])
+  const [loadingSavedUnis, setLoadingSavedUnis] = useState(false)
+
   const [transcriptsList, setTranscriptsList] = useState<TranscriptDto[]>([])
   const [loadingTranscripts, setLoadingTranscripts] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setLoadingSavedUnis(true)
+    getSavedUniversities()
+      .then((data) => {
+        if (active && data) setSavedUnis(data)
+      })
+      .catch((err) => console.warn('Could not fetch saved universities:', err))
+      .finally(() => {
+        if (active) setLoadingSavedUnis(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [user])
 
   const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
     emailNewConsult: true,
@@ -277,6 +299,77 @@ export default function StudentProfilePage() {
                           </Button>
                         </Link>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </BlurReveal>
+
+        {/* Saved Universities */}
+        <BlurReveal duration={600} delay={400} className="md:col-span-2">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-red-500 fill-current" />
+                  <CardTitle>Trường đại học đã lưu ({savedUnis.length})</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link to="/so-sanh">
+                    <Button variant="outline" size="sm" className="border-gold-400 text-gold-600 hover:bg-gold-50 text-xs">
+                      So sánh ngay
+                    </Button>
+                  </Link>
+                  <Link to="/truong" className="text-sm text-gold-600 font-medium hover:text-gold-500">
+                    Khám phá thêm
+                  </Link>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {loadingSavedUnis ? (
+                <div className="py-6 text-center text-slate-400">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-gold-500" />
+                  <p className="text-xs">Đang tải danh sách trường đã lưu...</p>
+                </div>
+              ) : savedUnis.length === 0 ? (
+                <div className="text-center py-6 text-slate-500">
+                  <p className="text-sm mb-2">Bạn chưa lưu trường đại học nào.</p>
+                  <Link to="/truong">
+                    <Button variant="outline" size="sm">
+                      Xem danh sách trường
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {savedUnis.map((uni) => (
+                    <div key={uni.id} className="p-4 rounded-xl border border-cream-200 bg-white hover:border-gold-400/40 transition-all flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link to={`/truong/${uni.id}`} className="font-semibold text-navy-800 text-sm hover:text-gold-600 block truncate">
+                          {uni.name}
+                        </Link>
+                        <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                          Mã: {uni.code} • {uni.region === 'NORTH' ? 'Miền Bắc' : uni.region === 'CENTRAL' ? 'Miền Trung' : 'Miền Nam'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={async () => {
+                            await toggleSaveUniversity(uni.id, Boolean(user))
+                            setSavedUnis((prev) => prev.filter((u) => u.id !== uni.id))
+                          }}
+                          className="p-1.5 rounded-full text-red-500 bg-red-50 hover:bg-red-100 transition-colors"
+                          title="Bỏ lưu trường"
+                        >
+                          <Heart className="w-4 h-4 fill-current" />
+                        </button>
+                        <Link to={`/truong/${uni.id}`}>
+                          <ChevronRight className="w-4 h-4 text-slate-400 hover:text-navy-800" />
+                        </Link>
+                      </div>
                     </div>
                   ))}
                 </div>

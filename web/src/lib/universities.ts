@@ -1,4 +1,4 @@
-import { fetchApi } from './api'
+import { fetchApi, postApi } from './api'
 
 export interface MatchResult {
   universityId: string
@@ -112,4 +112,82 @@ export async function getAdmissionScores(
   if (year) params.set('year', year.toString())
   const query = params.toString()
   return fetchApi<AdmissionScore[]>(`/admission-scores${query ? `?${query}` : ''}`)
+}
+
+const LOCAL_SAVED_KEY = 'admit_saved_universities_draft'
+
+export function getLocalSavedUniversityIds(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_SAVED_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // Ignore parse error
+  }
+  return []
+}
+
+export function saveLocalSavedUniversityIds(ids: string[]): void {
+  try {
+    localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(ids))
+  } catch {
+    // Ignore storage quota error
+  }
+}
+
+export async function getSavedUniversityIds(): Promise<string[]> {
+  try {
+    const ids = await fetchApi<string[]>('/saved-universities/ids')
+    saveLocalSavedUniversityIds(ids)
+    return ids
+  } catch {
+    return getLocalSavedUniversityIds()
+  }
+}
+
+export async function getSavedUniversities(): Promise<University[]> {
+  try {
+    return await fetchApi<University[]>('/saved-universities')
+  } catch {
+    const localIds = getLocalSavedUniversityIds()
+    const all = await getUniversities()
+    return all.filter((u) => localIds.includes(u.id))
+  }
+}
+
+export async function toggleSaveUniversity(universityId: string, isLoggedIn: boolean): Promise<boolean> {
+  if (isLoggedIn) {
+    try {
+      const res = await postApi<{ saved: boolean }>(`/saved-universities/toggle/${universityId}`, {})
+      const updated = await fetchApi<string[]>('/saved-universities/ids').catch(() => [])
+      saveLocalSavedUniversityIds(updated)
+      return res.saved
+    } catch (e) {
+      console.warn('Backend toggle failed, falling back to local storage:', e)
+    }
+  }
+
+  const current = getLocalSavedUniversityIds()
+  let isSaved: boolean
+  let next: string[]
+  if (current.includes(universityId)) {
+    next = current.filter((id) => id !== universityId)
+    isSaved = false
+  } else {
+    next = [...current, universityId]
+    isSaved = true
+  }
+  saveLocalSavedUniversityIds(next)
+  return isSaved
+}
+
+export async function syncSavedUniversities(): Promise<string[]> {
+  const localIds = getLocalSavedUniversityIds()
+  if (localIds.length === 0) return []
+  try {
+    const res = await postApi<string[]>('/saved-universities/sync', localIds)
+    saveLocalSavedUniversityIds(res)
+    return res
+  } catch {
+    return localIds
+  }
 }

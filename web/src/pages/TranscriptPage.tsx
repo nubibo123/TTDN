@@ -425,45 +425,25 @@ export default function TranscriptPage() {
     loadTranscripts()
   }, [loadTranscripts])
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setExtracting(true)
-    setExtractError('')
-    try {
-      const extracted = await extractScoresFromImage(file, { allowDemoFallback: false })
-      setScores((prev) => ({
-        ...prev,
-        [activeGrade]: extracted,
-      }))
-      setUploaded(true)
-    } catch (err: any) {
-      console.error('OCR error detailed:', err)
-      setExtractError('Không thể trích xuất điểm từ hình ảnh lúc này. Vui lòng thử lại sau hoặc nhập thủ công.')
-    } finally {
-      setExtracting(false)
-      if (e.target) e.target.value = ''
-    }
-  }
-
-  const handleSave = async () => {
+  const handleSave = async (targetScores?: ScoreEntry) => {
+    const scoresToSave = targetScores ?? scores
     setSaving(true)
     setSaveError('')
     setSaveWarningMsg('')
     setSaveSuccessMsg('')
 
     // 1. Always back up locally first
-    saveLocalBackup(scores)
+    saveLocalBackup(scoresToSave)
 
     // Check how many subjects are entered overall
     const totalFilled =
-      countEnteredSubjects(scores.grade10.semester1) +
-      countEnteredSubjects(scores.grade10.semester2) +
-      countEnteredSubjects(scores.grade11.semester1) +
-      countEnteredSubjects(scores.grade11.semester2) +
-      countEnteredSubjects(scores.grade12.semester1) +
-      countEnteredSubjects(scores.grade12.semester2) +
-      countEnteredSubjects(scores.graduation)
+      countEnteredSubjects(scoresToSave.grade10.semester1) +
+      countEnteredSubjects(scoresToSave.grade10.semester2) +
+      countEnteredSubjects(scoresToSave.grade11.semester1) +
+      countEnteredSubjects(scoresToSave.grade11.semester2) +
+      countEnteredSubjects(scoresToSave.grade12.semester1) +
+      countEnteredSubjects(scoresToSave.grade12.semester2) +
+      countEnteredSubjects(scoresToSave.graduation)
 
     if (totalFilled === 0) {
       setSaveWarningMsg('Bạn chưa nhập điểm môn nào. Vui lòng nhập ít nhất 1 điểm trước khi lưu.')
@@ -474,13 +454,13 @@ export default function TranscriptPage() {
     const currentYear = new Date().getFullYear()
 
     const allSemesters: { semester: SaveTranscriptRequest['semester']; year: number; scoresMap: Record<SubjectKey, string> }[] = [
-      { semester: 'HK1_L10', year: currentYear - 2, scoresMap: scores.grade10.semester1 },
-      { semester: 'HK2_L10', year: currentYear - 2, scoresMap: scores.grade10.semester2 },
-      { semester: 'HK1_L11', year: currentYear - 1, scoresMap: scores.grade11.semester1 },
-      { semester: 'HK2_L11', year: currentYear - 1, scoresMap: scores.grade11.semester2 },
-      { semester: 'HK1_L12', year: currentYear, scoresMap: scores.grade12.semester1 },
-      { semester: 'HK2_L12', year: currentYear, scoresMap: scores.grade12.semester2 },
-      { semester: 'GRADUATION_EXAM', year: currentYear, scoresMap: scores.graduation },
+      { semester: 'HK1_L10', year: currentYear - 2, scoresMap: scoresToSave.grade10.semester1 },
+      { semester: 'HK2_L10', year: currentYear - 2, scoresMap: scoresToSave.grade10.semester2 },
+      { semester: 'HK1_L11', year: currentYear - 1, scoresMap: scoresToSave.grade11.semester1 },
+      { semester: 'HK2_L11', year: currentYear - 1, scoresMap: scoresToSave.grade11.semester2 },
+      { semester: 'HK1_L12', year: currentYear, scoresMap: scoresToSave.grade12.semester1 },
+      { semester: 'HK2_L12', year: currentYear, scoresMap: scoresToSave.grade12.semester2 },
+      { semester: 'GRADUATION_EXAM', year: currentYear, scoresMap: scoresToSave.graduation },
     ]
 
     // Include all semesters that have any score entered (partial or full)
@@ -496,23 +476,46 @@ export default function TranscriptPage() {
     })
 
     if (!user) {
-      setSaveWarningMsg('Đã lưu bản nháp an toàn trên thiết bị của bạn! Vui lòng đăng nhập để đồng bộ lên hệ thống.')
+      setSaveWarningMsg('Đã trích xuất và lưu bản nháp an toàn trên thiết bị! Vui lòng đăng nhập để lưu trực tiếp vào cơ sở dữ liệu hệ thống.')
       setSaving(false)
-      setTimeout(() => setSaveWarningMsg(''), 5000)
+      setTimeout(() => setSaveWarningMsg(''), 6000)
       return
     }
 
     try {
       await saveBatchTranscripts(payload)
-      setSaveSuccessMsg(`Đã lưu thành công (${totalFilled} điểm môn học)!`)
+      setSaveSuccessMsg(`Đã lưu thành công (${totalFilled} điểm môn học) vào cơ sở dữ liệu!`)
       setTimeout(() => setSaveSuccessMsg(''), 4000)
     } catch (err: any) {
       console.error('Failed to save transcripts to server:', err)
       setSaveWarningMsg(
-        'Đã lưu an toàn vào thiết bị của bạn. Đã có lỗi bất ngờ xảy ra khi đồng bộ trực tuyến, vui lòng thử lại sau.'
+        'Đã lưu an toàn vào thiết bị của bạn. Đã có lỗi xảy ra khi lưu lên cơ sở dữ liệu, vui lòng thử lại sau.'
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setExtracting(true)
+    setExtractError('')
+    try {
+      const extracted = await extractScoresFromImage(file, { allowDemoFallback: true })
+      const nextScores: ScoreEntry = {
+        ...scores,
+        [activeGrade]: extracted,
+      }
+      setScores(nextScores)
+      setUploaded(true)
+      await handleSave(nextScores)
+    } catch (err: any) {
+      console.error('OCR error detailed:', err)
+      setExtractError('Không thể trích xuất điểm từ hình ảnh lúc này. Vui lòng thử lại sau hoặc nhập thủ công.')
+    } finally {
+      setExtracting(false)
+      if (e.target) e.target.value = ''
     }
   }
 
@@ -813,7 +816,7 @@ export default function TranscriptPage() {
                   >
                     {editable ? 'Khóa chỉnh sửa' : 'Mở chỉnh sửa'}
                   </Button>
-                  <Button variant="primary" onClick={handleSave} disabled={saving} className="gap-2">
+                  <Button variant="primary" onClick={() => handleSave()} disabled={saving} className="gap-2">
                     {saving ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
