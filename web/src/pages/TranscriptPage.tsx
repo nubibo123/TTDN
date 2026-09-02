@@ -502,7 +502,7 @@ export default function TranscriptPage() {
     setExtracting(true)
     setExtractError('')
     try {
-      const extracted = await extractScoresFromImage(file, { allowDemoFallback: true })
+      const extracted = await extractScoresFromImage(file)
       const nextScores: ScoreEntry = {
         ...scores,
         [activeGrade]: extracted,
@@ -668,7 +668,7 @@ export default function TranscriptPage() {
                   <div className="w-16 h-16 bg-gold-500/10 rounded-full flex items-center justify-center">
                     <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />
                   </div>
-                  <p className="font-semibold text-navy-800">Gemini đang đọc điểm...</p>
+                  <p className="font-semibold text-navy-800">NVIDIA NIM đang đọc điểm...</p>
                   <p className="text-sm text-slate-500">Vui lòng đợi trong giây lát</p>
                 </div>
               ) : !uploaded ? (

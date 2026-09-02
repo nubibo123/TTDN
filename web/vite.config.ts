@@ -13,12 +13,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/ocr-proxy': {
-        target: 'https://a325-34-148-105-29.ngrok-free.app/',
+        target: 'https://de9f-35-231-229-14.ngrok-free.app/',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ocr-proxy/, ''),
         headers: { 'ngrok-skip-browser-warning': 'true' },
-        timeout: 3000,
-        proxyTimeout: 3000,
+        timeout: 180000,
+        proxyTimeout: 180000,
         configure: (proxy) => {
           proxy.on('error', (_err, _req, res) => {
             const response = res as any

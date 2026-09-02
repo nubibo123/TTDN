@@ -1,9 +1,7 @@
 import type { SubjectKey } from '@/pages/TranscriptPage'
-import { createWorker } from 'tesseract.js'
 
-const HAS_CUSTOM_ENDPOINT = Boolean(import.meta.env.VITE_OCR_ENDPOINT)
-const OCR_ENDPOINT = (import.meta.env.VITE_OCR_ENDPOINT as string | undefined) ?? '/ocr-proxy/ocr'
-const OCR_TIMEOUT_MS = 3_000
+const OCR_ENDPOINT = '/ocr-proxy/ocr'
+const OCR_TIMEOUT_MS = 180_000
 
 export interface ExtractedScores {
   semester1: Record<SubjectKey, string>
@@ -32,6 +30,16 @@ const SUBJECT_MAP: Record<string, SubjectKey> = {
   'gdcd': 'civic',
 }
 
+function normalizeScore(value: unknown): string {
+  if (value === null || value === undefined || value === '' || value === '-') return ''
+
+  const score = Number(String(value).trim().replace(',', '.'))
+  if (!Number.isFinite(score) || score < 0 || score > 100) return ''
+
+  if (score > 10) return (score / 10).toFixed(1)
+  return String(value).trim().replace(',', '.')
+}
+
 function parseOcrText(text: string): ExtractedScores {
   const result: ExtractedScores = { semester1: EMPTY(), semester2: EMPTY() }
 
@@ -45,7 +53,7 @@ function parseOcrText(text: string): ExtractedScores {
         for (const [aiKey, val] of Object.entries(raw)) {
           const subjectKey = SUBJECT_MAP[aiKey.toLowerCase()]
           if (subjectKey) {
-            base[subjectKey] = (val !== null && val !== undefined) ? String(val) : ''
+            base[subjectKey] = normalizeScore(val)
           }
         }
         return base
@@ -93,8 +101,8 @@ function parseOcrText(text: string): ExtractedScores {
               return false
             }
           }
-          return num >= 0 && num <= 10
-        })
+          return Boolean(normalizeScore(val))
+        }).map(normalizeScore)
 
         if (matches.length >= 2) {
           result.semester1[key] = matches[0]
@@ -113,98 +121,6 @@ function parseOcrText(text: string): ExtractedScores {
   return result
 }
 
-async function runGeminiApiOcr(file: File, apiKey: string): Promise<ExtractedScores | null> {
-  try {
-    const arrayBuffer = await file.arrayBuffer()
-    const bytes = new Uint8Array(arrayBuffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    const base64Data = btoa(binary)
-
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              text: `Read this high school transcript image and extract grades into JSON format with keys hoc_ky_1 and hoc_ky_2. Extract exact scores for subjects: toan, van, tieng_anh, vat_ly, hoa_hoc, sinh_hoc, lich_su, dia_ly, gdcd. Output ONLY JSON.`
-            },
-            {
-              inline_data: {
-                mime_type: file.type || 'image/jpeg',
-                data: base64Data
-              }
-            }
-          ]
-        }]
-      })
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-      if (text) {
-        const parsed = parseOcrText(text)
-        if (parsed.source === 'ocr') return parsed
-      }
-    }
-  } catch (err) {
-    console.warn('Gemini API OCR error:', err)
-  }
-  return null
-}
-
-async function runClientOcr(file: File): Promise<ExtractedScores | null> {
-  const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ?? localStorage.getItem('gemini_api_key')
-  if (geminiKey) {
-    const geminiResult = await runGeminiApiOcr(file, geminiKey)
-    if (geminiResult && geminiResult.source === 'ocr') {
-      return geminiResult
-    }
-  }
-
-  try {
-    const worker = await createWorker('eng')
-    const { data: { text } } = await worker.recognize(file)
-    await worker.terminate()
-    if (text) {
-      const parsed = parseOcrText(text)
-      if (parsed.source === 'ocr') {
-        return parsed
-      }
-    }
-  } catch (err) {
-    console.warn('Client OCR recognition error:', err)
-  }
-  return null
-}
-
-function demoScores(extracted: ExtractedScores): ExtractedScores {
-  const jitter = (() => {
-    const a = 0.3
-    const b = 1.0
-    return Math.round((Math.random() * (b - a) + a) * 10) / 10
-  })()
-  const fill = (): Record<SubjectKey, string> => ({
-    math: (7.5 + jitter).toFixed(1),
-    literature: (7.5 + jitter + 0.2).toFixed(1),
-    english: (8.0 + jitter).toFixed(1),
-    physics: (7.0 + jitter).toFixed(1),
-    chemistry: (7.5 + jitter - 0.2).toFixed(1),
-    biology: (7.8 + jitter).toFixed(1),
-    history: (8.2 + jitter).toFixed(1),
-    geography: (7.6 + jitter).toFixed(1),
-    civic: (8.4 + jitter).toFixed(1),
-  })
-  if (extracted.semester1.math || extracted.semester2.math) {
-    return { ...extracted, source: 'demo' }
-  }
-  return { semester1: fill(), semester2: fill(), source: 'demo' }
-}
-
 export class OcrServerError extends Error {
   status: number
   detail?: string
@@ -217,11 +133,8 @@ export class OcrServerError extends Error {
 }
 
 export async function extractScoresFromImage(
-  file: File,
-  options: { allowDemoFallback?: boolean } = {}
+  file: File
 ): Promise<ExtractedScores> {
-  const allowDemoFallback = options.allowDemoFallback ?? true
-
   let jpegBlob: Blob
   try {
     jpegBlob = await new Promise<Blob>((resolve, reject) => {
@@ -268,20 +181,7 @@ export async function extractScoresFromImage(
       img.src = url
     })
   } catch (err) {
-    const clientOcr = await runClientOcr(file)
-    if (clientOcr) return clientOcr
-    if (allowDemoFallback) {
-      return demoScores({ semester1: EMPTY(), semester2: EMPTY() })
-    }
     throw err instanceof Error ? err : new Error('Không thể đọc ảnh')
-  }
-
-  if (!HAS_CUSTOM_ENDPOINT) {
-    const clientOcr = await runClientOcr(file)
-    if (clientOcr) return clientOcr
-    if (allowDemoFallback) {
-      return demoScores({ semester1: EMPTY(), semester2: EMPTY() })
-    }
   }
 
   const formData = new FormData()
@@ -300,27 +200,11 @@ export async function extractScoresFromImage(
     })
   } catch (err) {
     clearTimeout(timer)
-    const clientOcr = await runClientOcr(file)
-    if (clientOcr) return clientOcr
-    if (allowDemoFallback) {
-      const parsed = demoScores({ semester1: EMPTY(), semester2: EMPTY() })
-      ;(parsed as ExtractedScores & { _fallbackReason: string })._fallbackReason =
-        err instanceof Error ? err.message : 'network_error'
-      return parsed
-    }
     throw new Error('Không thể kết nối tới máy chủ OCR. Vui lòng thử lại sau.')
   }
   clearTimeout(timer)
 
   if (!res || !res.ok) {
-    const clientOcr = await runClientOcr(file)
-    if (clientOcr) return clientOcr
-    if (allowDemoFallback) {
-      const parsed = demoScores({ semester1: EMPTY(), semester2: EMPTY() })
-      ;(parsed as ExtractedScores & { _fallbackReason: string })._fallbackReason =
-        `http_${res?.status}`
-      return parsed
-    }
     throw new OcrServerError(res?.status ?? 500, 'OCR endpoint unavailable')
   }
 
@@ -328,8 +212,6 @@ export async function extractScoresFromImage(
   try {
     json = await res.json()
   } catch {
-    const clientOcr = await runClientOcr(file)
-    if (clientOcr) return clientOcr
     throw new Error('Phản hồi OCR không hợp lệ')
   }
 
