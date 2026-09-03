@@ -10,4 +10,6 @@ import java.util.List;
 public interface ConsultationRepository extends JpaRepository<Consultation, String> {
     List<Consultation> findByStudentIdOrderByCreatedAtDesc(String studentId);
     List<Consultation> findByAdvisorIdOrderByCreatedAtDesc(String advisorId);
+    List<Consultation> findByAdvisorIdOrAdvisorIdIsNullOrderByCreatedAtDesc(String advisorId);
+    List<Consultation> findAllByOrderByCreatedAtDesc();
 }

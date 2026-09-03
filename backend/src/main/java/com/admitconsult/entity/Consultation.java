@@ -33,6 +33,16 @@ public class Consultation {
     @Column(nullable = false, columnDefinition = "text")
     private String message;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ConsultationMode mode = ConsultationMode.CHAT;
+
+    @Column(name = "scheduled_time")
+    private String scheduledTime;
+
+    @Column(name = "contact_phone")
+    private String contactPhone;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -54,4 +64,5 @@ public class Consultation {
     private Set<ConsultationMessage> messages = new HashSet<>();
 
     public enum ConsultationStatus { PENDING, ACCEPTED, COMPLETED, REJECTED }
+    public enum ConsultationMode { CHAT, SCHEDULED_CALL }
 }

@@ -11,6 +11,7 @@ import { getUniversityById, getSavedUniversityIds, toggleSaveUniversity, type Un
 import { getMajors, getAdmissionScores } from '@/lib/universities'
 import { useAuth } from '@/lib/authContext'
 import UniversityDetailSkeleton from './UniversityDetailSkeleton'
+import BookConsultationModal from '@/components/BookConsultationModal'
 
 const INITIAL_MAJOR_COUNT = 8
 const YEARS = [2023, 2024, 2025]
@@ -26,6 +27,7 @@ export default function UniversityDetailPage() {
   const [expandedMajor, setExpandedMajor] = useState<string | null>(null)
   const [isSaved, setIsSaved] = useState(false)
   const [error, setError] = useState(false)
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -97,17 +99,26 @@ export default function UniversityDetailPage() {
                 </p>
               )}
             </div>
-            <Button
-              variant="outline"
-              onClick={handleToggleSave}
-              className={cn(
-                'border-cream-100/30 text-cream-50 hover:bg-cream-100/10 gap-2 self-start shrink-0',
-                isSaved && 'bg-red-500/20 text-red-300 border-red-400/50'
-              )}
-            >
-              <Heart className={cn('w-4 h-4', isSaved && 'fill-current text-red-400')} />
-              {isSaved ? 'Đã lưu trường' : 'Lưu trường'}
-            </Button>
+            <div className="flex items-center gap-3 self-start shrink-0 flex-wrap">
+              <Button
+                variant="primary"
+                onClick={() => setIsBookModalOpen(true)}
+                className="bg-gold-500 hover:bg-gold-600 text-white gap-2"
+              >
+                <BookOpen className="w-4 h-4" /> Đăng ký tư vấn
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleToggleSave}
+                className={cn(
+                  'border-cream-100/30 text-cream-50 hover:bg-cream-100/10 gap-2',
+                  isSaved && 'bg-red-500/20 text-red-300 border-red-400/50'
+                )}
+              >
+                <Heart className={cn('w-4 h-4', isSaved && 'fill-current text-red-400')} />
+                {isSaved ? 'Đã lưu trường' : 'Lưu trường'}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -302,6 +313,12 @@ export default function UniversityDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <BookConsultationModal
+        isOpen={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        advisorName={uni?.name}
+      />
     </div>
   )
 }

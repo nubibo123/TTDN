@@ -2,9 +2,15 @@ package com.admitconsult.controller;
 
 import com.admitconsult.dto.ApiResponse;
 import com.admitconsult.dto.ConsultationDto;
+import com.admitconsult.dto.ConsultationMessageDto;
 import com.admitconsult.dto.UserPrincipal;
 import com.admitconsult.entity.Consultation;
+import com.admitconsult.entity.ConsultationMessage;
+import com.admitconsult.entity.User;
+import com.admitconsult.repository.AdvisorRepository;
+import com.admitconsult.repository.ConsultationMessageRepository;
 import com.admitconsult.repository.ConsultationRepository;
+import com.admitconsult.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,18 +24,46 @@ import java.util.List;
 public class ConsultationController {
 
     private final ConsultationRepository consultationRepository;
+    private final ConsultationMessageRepository consultationMessageRepository;
+    private final UserRepository userRepository;
+    private final AdvisorRepository advisorRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ConsultationDto>>> getMyConsultations(
             @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
         List<Consultation> list = consultationRepository
                 .findByStudentIdOrderByCreatedAtDesc(principal.getId());
         List<ConsultationDto> dtos = list.stream().map(this::toDto).toList();
         return ResponseEntity.ok(ApiResponse.success(dtos));
     }
 
+    @GetMapping("/advisor")
+    public ResponseEntity<ApiResponse<List<ConsultationDto>>> getAdvisorConsultations(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        var advisorOpt = advisorRepository.findByUserId(principal.getId());
+        String advisorId = advisorOpt.map(a -> a.getId()).orElse(null);
+
+        List<Consultation> list;
+        if (advisorId != null) {
+            list = consultationRepository.findByAdvisorIdOrAdvisorIdIsNullOrderByCreatedAtDesc(advisorId);
+        } else {
+            list = consultationRepository.findAllByOrderByCreatedAtDesc();
+        }
+
+        List<ConsultationDto> dtos = list.stream().map(this::toDto).toList();
+        return ResponseEntity.ok(ApiResponse.success(dtos));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ConsultationDto>> getById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ConsultationDto>> getById(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String id) {
         return consultationRepository.findById(id)
                 .map(c -> ResponseEntity.ok(ApiResponse.success(toDto(c))))
                 .orElse(ResponseEntity.notFound().build());
@@ -39,32 +73,223 @@ public class ConsultationController {
     public ResponseEntity<ApiResponse<ConsultationDto>> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody CreateConsultationRequest request) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        if (request.getTopic() == null || request.getTopic().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Chủ đề tư vấn không được để trống"));
+        }
+        if (request.getMessage() == null || request.getMessage().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Nội dung không được để trống"));
+        }
+
+        Consultation.ConsultationMode mode = Consultation.ConsultationMode.CHAT;
+        if (request.getMode() != null && !request.getMode().isBlank()) {
+            try {
+                mode = Consultation.ConsultationMode.valueOf(request.getMode().toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
 
         Consultation consultation = Consultation.builder()
                 .studentId(principal.getId())
-                .topic(request.getTopic())
-                .message(request.getMessage())
+                .advisorId(request.getAdvisorId() != null && !request.getAdvisorId().isBlank() ? request.getAdvisorId() : null)
+                .topic(request.getTopic().trim())
+                .message(request.getMessage().trim())
+                .mode(mode)
+                .scheduledTime(request.getScheduledTime())
+                .contactPhone(request.getContactPhone())
                 .status(Consultation.ConsultationStatus.PENDING)
                 .build();
 
         Consultation saved = consultationRepository.save(consultation);
-        return ResponseEntity.ok(ApiResponse.success("Consultation created", toDto(saved)));
+
+        // Also record initial message in message table
+        ConsultationMessage initialMsg = ConsultationMessage.builder()
+                .consultationId(saved.getId())
+                .senderId(principal.getId())
+                .content(saved.getMessage())
+                .isOfficial(false)
+                .build();
+        consultationMessageRepository.save(initialMsg);
+
+        return ResponseEntity.ok(ApiResponse.success("Yêu cầu tư vấn đã được gửi thành công", toDto(saved)));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<ConsultationDto>> updateStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String id,
+            @RequestBody UpdateStatusRequest request) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        Consultation consultation = consultationRepository.findById(id).orElse(null);
+        if (consultation == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Consultation.ConsultationStatus newStatus;
+        try {
+            newStatus = Consultation.ConsultationStatus.valueOf(request.getStatus().toUpperCase());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Trạng thái không hợp lệ"));
+        }
+
+        consultation.setStatus(newStatus);
+
+        // If advisor is accepting and consultation didn't have an advisor assigned, bind advisor
+        var advisorOpt = advisorRepository.findByUserId(principal.getId());
+        if (advisorOpt.isPresent() && consultation.getAdvisorId() == null) {
+            consultation.setAdvisorId(advisorOpt.get().getId());
+        }
+
+        Consultation saved = consultationRepository.save(consultation);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", toDto(saved)));
+    }
+
+    @GetMapping("/{id}/messages")
+    public ResponseEntity<ApiResponse<List<ConsultationMessageDto>>> getMessages(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String id) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        Consultation consultation = consultationRepository.findById(id).orElse(null);
+        if (consultation == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<ConsultationMessage> messages = consultationMessageRepository
+                .findByConsultationIdOrderByCreatedAtAsc(id);
+        List<ConsultationMessageDto> dtos = messages.stream().map(this::toMessageDto).toList();
+        return ResponseEntity.ok(ApiResponse.success(dtos));
+    }
+
+    @PostMapping("/{id}/messages")
+    public ResponseEntity<ApiResponse<ConsultationMessageDto>> sendMessage(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String id,
+            @RequestBody SendMessageRequest request) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        if (request.getContent() == null || request.getContent().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Nội dung tin nhắn không được để trống"));
+        }
+
+        Consultation consultation = consultationRepository.findById(id).orElse(null);
+        if (consultation == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        boolean isAdvisor = advisorRepository.findByUserId(principal.getId()).isPresent();
+
+        ConsultationMessage msg = ConsultationMessage.builder()
+                .consultationId(id)
+                .senderId(principal.getId())
+                .content(request.getContent().trim())
+                .isOfficial(isAdvisor)
+                .build();
+        ConsultationMessage saved = consultationMessageRepository.save(msg);
+
+        // If consultation was pending and advisor messages, auto-accept it
+        if (isAdvisor && consultation.getStatus() == Consultation.ConsultationStatus.PENDING) {
+            consultation.setStatus(Consultation.ConsultationStatus.ACCEPTED);
+            var advisorOpt = advisorRepository.findByUserId(principal.getId());
+            if (advisorOpt.isPresent() && consultation.getAdvisorId() == null) {
+                consultation.setAdvisorId(advisorOpt.get().getId());
+            }
+            consultationRepository.save(consultation);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(toMessageDto(saved)));
     }
 
     private ConsultationDto toDto(Consultation c) {
-        return new ConsultationDto(
-                c.getId(), c.getStudentId(),
-                c.getStudent() != null ? c.getStudent().getName() : null,
-                c.getAdvisorId(),
-                c.getAdvisor() != null ? c.getAdvisor().getTitle() : null,
-                c.getTopic(), c.getMessage(),
-                c.getStatus().name(), c.getCreatedAt()
-        );
+        String studentName = null;
+        String studentEmail = null;
+        if (c.getStudentId() != null) {
+            User s = c.getStudent();
+            if (s == null) {
+                s = userRepository.findById(c.getStudentId()).orElse(null);
+            }
+            if (s != null) {
+                studentName = s.getName();
+                studentEmail = s.getEmail();
+            }
+        }
+
+        String advisorName = null;
+        if (c.getAdvisor() != null) {
+            advisorName = c.getAdvisor().getTitle();
+            if (advisorName == null && c.getAdvisor().getUserId() != null) {
+                User u = userRepository.findById(c.getAdvisor().getUserId()).orElse(null);
+                advisorName = u != null ? u.getName() : null;
+            }
+        }
+
+        return ConsultationDto.builder()
+                .id(c.getId())
+                .studentId(c.getStudentId())
+                .studentName(studentName)
+                .studentEmail(studentEmail)
+                .advisorId(c.getAdvisorId())
+                .advisorName(advisorName)
+                .topic(c.getTopic())
+                .message(c.getMessage())
+                .mode(c.getMode() != null ? c.getMode().name() : "CHAT")
+                .scheduledTime(c.getScheduledTime())
+                .contactPhone(c.getContactPhone())
+                .status(c.getStatus() != null ? c.getStatus().name() : "PENDING")
+                .createdAt(c.getCreatedAt())
+                .build();
+    }
+
+    private ConsultationMessageDto toMessageDto(ConsultationMessage m) {
+        String senderName = null;
+        String senderRole = "STUDENT";
+
+        User sender = m.getSender();
+        if (sender == null && m.getSenderId() != null) {
+            sender = userRepository.findById(m.getSenderId()).orElse(null);
+        }
+        if (sender != null) {
+            senderName = sender.getName();
+        }
+
+        if (m.getSenderId() != null && advisorRepository.findByUserId(m.getSenderId()).isPresent()) {
+            senderRole = "ADVISOR";
+        }
+
+        return ConsultationMessageDto.builder()
+                .id(m.getId())
+                .consultationId(m.getConsultationId())
+                .senderId(m.getSenderId())
+                .senderName(senderName)
+                .senderRole(senderRole)
+                .content(m.getContent())
+                .isOfficial(m.getIsOfficial())
+                .createdAt(m.getCreatedAt())
+                .build();
     }
 
     @lombok.Data
     public static class CreateConsultationRequest {
+        private String advisorId;
         private String topic;
         private String message;
+        private String mode;
+        private String scheduledTime;
+        private String contactPhone;
+    }
+
+    @lombok.Data
+    public static class UpdateStatusRequest {
+        private String status;
+    }
+
+    @lombok.Data
+    public static class SendMessageRequest {
+        private String content;
     }
 }
