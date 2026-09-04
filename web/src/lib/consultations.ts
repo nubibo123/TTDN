@@ -29,6 +29,7 @@ export interface ConsultationMessageDto {
 
 export interface CreateConsultationRequest {
   advisorId?: string
+  universityId?: string
   topic: string
   message: string
   mode: 'CHAT' | 'SCHEDULED_CALL'

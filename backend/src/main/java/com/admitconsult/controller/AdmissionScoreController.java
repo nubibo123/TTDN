@@ -18,6 +18,7 @@ public class AdmissionScoreController {
 
     private final AdmissionScoreRepository admissionScoreRepository;
     private final MajorRepository majorRepository;
+    private final com.admitconsult.repository.UniversityRepository universityRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<AdmissionScoreDto>>> getAll(
@@ -31,8 +32,12 @@ public class AdmissionScoreController {
             list = admissionScoreRepository.findByMajorIdAndYear(majorId, year);
         } else if (majorId != null) {
             list = admissionScoreRepository.findByMajorId(majorId);
-        } else if (universityId != null) {
-            list = admissionScoreRepository.findByMajor_University_Id(universityId);
+        } else if (universityId != null && !universityId.isBlank()) {
+            String resolvedUniId = universityRepository.findById(universityId)
+                    .or(() -> universityRepository.findByCode(universityId))
+                    .map(com.admitconsult.entity.University::getId)
+                    .orElse(universityId);
+            list = admissionScoreRepository.findByMajor_University_Id(resolvedUniId);
         } else {
             list = admissionScoreRepository.findAll();
         }

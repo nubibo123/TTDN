@@ -18,15 +18,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/consultations")
 @RequiredArgsConstructor
+@Transactional
 public class ConsultationController {
 
     private final ConsultationRepository consultationRepository;
     private final ConsultationMessageRepository consultationMessageRepository;
     private final UserRepository userRepository;
     private final AdvisorRepository advisorRepository;
+    private final com.admitconsult.repository.UniversityRepository universityRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ConsultationDto>>> getMyConsultations(
@@ -46,16 +50,7 @@ public class ConsultationController {
         if (principal == null) {
             return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
         }
-        var advisorOpt = advisorRepository.findByUserId(principal.getId());
-        String advisorId = advisorOpt.map(a -> a.getId()).orElse(null);
-
-        List<Consultation> list;
-        if (advisorId != null) {
-            list = consultationRepository.findByAdvisorIdOrAdvisorIdIsNullOrderByCreatedAtDesc(advisorId);
-        } else {
-            list = consultationRepository.findAllByOrderByCreatedAtDesc();
-        }
-
+        List<Consultation> list = consultationRepository.findAllByOrderByCreatedAtDesc();
         List<ConsultationDto> dtos = list.stream().map(this::toDto).toList();
         return ResponseEntity.ok(ApiResponse.success(dtos));
     }
@@ -90,9 +85,29 @@ public class ConsultationController {
             } catch (IllegalArgumentException ignored) {}
         }
 
+        String targetAdvisorId = request.getAdvisorId();
+        if (targetAdvisorId == null || targetAdvisorId.isBlank()) {
+            if (request.getUniversityId() != null && !request.getUniversityId().isBlank()) {
+                String resolvedUniId = universityRepository.findById(request.getUniversityId())
+                        .or(() -> universityRepository.findByCode(request.getUniversityId()))
+                        .map(com.admitconsult.entity.University::getId)
+                        .orElse(request.getUniversityId());
+                var uniAdvisors = advisorRepository.findByUniversityId(resolvedUniId);
+                if (!uniAdvisors.isEmpty()) {
+                    targetAdvisorId = uniAdvisors.get(0).getId();
+                }
+            }
+            if (targetAdvisorId == null || targetAdvisorId.isBlank()) {
+                var allAdvisors = advisorRepository.findAll();
+                if (!allAdvisors.isEmpty()) {
+                    targetAdvisorId = allAdvisors.get(0).getId();
+                }
+            }
+        }
+
         Consultation consultation = Consultation.builder()
                 .studentId(principal.getId())
-                .advisorId(request.getAdvisorId() != null && !request.getAdvisorId().isBlank() ? request.getAdvisorId() : null)
+                .advisorId(targetAdvisorId)
                 .topic(request.getTopic().trim())
                 .message(request.getMessage().trim())
                 .mode(mode)
@@ -209,22 +224,53 @@ public class ConsultationController {
         String studentName = null;
         String studentEmail = null;
         if (c.getStudentId() != null) {
-            User s = c.getStudent();
+            User s = null;
+            try {
+                s = c.getStudent();
+            } catch (Exception ignored) {}
             if (s == null) {
                 s = userRepository.findById(c.getStudentId()).orElse(null);
             }
             if (s != null) {
-                studentName = s.getName();
-                studentEmail = s.getEmail();
+                try {
+                    studentName = s.getName();
+                    studentEmail = s.getEmail();
+                } catch (Exception e) {
+                    s = userRepository.findById(c.getStudentId()).orElse(null);
+                    if (s != null) {
+                        studentName = s.getName();
+                        studentEmail = s.getEmail();
+                    }
+                }
             }
         }
 
         String advisorName = null;
-        if (c.getAdvisor() != null) {
-            advisorName = c.getAdvisor().getTitle();
-            if (advisorName == null && c.getAdvisor().getUserId() != null) {
-                User u = userRepository.findById(c.getAdvisor().getUserId()).orElse(null);
-                advisorName = u != null ? u.getName() : null;
+        if (c.getAdvisorId() != null) {
+            com.admitconsult.entity.Advisor adv = null;
+            try {
+                adv = c.getAdvisor();
+            } catch (Exception ignored) {}
+            if (adv == null) {
+                adv = advisorRepository.findById(c.getAdvisorId()).orElse(null);
+            }
+            if (adv != null) {
+                User u = null;
+                try {
+                    u = adv.getUser();
+                } catch (Exception ignored) {}
+                if (u == null && adv.getUserId() != null) {
+                    u = userRepository.findById(adv.getUserId()).orElse(null);
+                }
+                String name = u != null ? u.getName() : null;
+                String title = adv.getTitle();
+                if (name != null && title != null) {
+                    advisorName = title + " (" + name + ")";
+                } else if (name != null) {
+                    advisorName = name;
+                } else {
+                    advisorName = title;
+                }
             }
         }
 
@@ -249,12 +295,20 @@ public class ConsultationController {
         String senderName = null;
         String senderRole = "STUDENT";
 
-        User sender = m.getSender();
+        User sender = null;
+        try {
+            sender = m.getSender();
+        } catch (Exception ignored) {}
         if (sender == null && m.getSenderId() != null) {
             sender = userRepository.findById(m.getSenderId()).orElse(null);
         }
         if (sender != null) {
-            senderName = sender.getName();
+            try {
+                senderName = sender.getName();
+            } catch (Exception e) {
+                sender = userRepository.findById(m.getSenderId()).orElse(null);
+                if (sender != null) senderName = sender.getName();
+            }
         }
 
         if (m.getSenderId() != null && advisorRepository.findByUserId(m.getSenderId()).isPresent()) {
@@ -276,6 +330,7 @@ public class ConsultationController {
     @lombok.Data
     public static class CreateConsultationRequest {
         private String advisorId;
+        private String universityId;
         private String topic;
         private String message;
         private String mode;

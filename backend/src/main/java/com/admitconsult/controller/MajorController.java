@@ -18,6 +18,7 @@ import java.util.List;
 public class MajorController {
 
     private final MajorRepository majorRepository;
+    private final com.admitconsult.repository.UniversityRepository universityRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<MajorDto>>> getAll(
@@ -25,8 +26,12 @@ public class MajorController {
             @RequestParam(required = false) String subjectGroup) {
 
         List<Major> list;
-        if (universityId != null) {
-            list = majorRepository.findByUniversityId(universityId);
+        if (universityId != null && !universityId.isBlank()) {
+            String resolvedUniId = universityRepository.findById(universityId)
+                    .or(() -> universityRepository.findByCode(universityId))
+                    .map(com.admitconsult.entity.University::getId)
+                    .orElse(universityId);
+            list = majorRepository.findByUniversityId(resolvedUniId);
         } else if (subjectGroup != null) {
             list = majorRepository.findBySubjectGroup(subjectGroup);
         } else {

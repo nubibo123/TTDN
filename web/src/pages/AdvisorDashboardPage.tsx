@@ -1,49 +1,94 @@
-import { useState, useEffect } from 'react'
-import { Users, MessageCircle, Eye, BarChart3, Pin, Phone, Check, X, Clock, Loader2, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect, FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Users,
+  MessageCircle,
+  Eye,
+  BarChart3,
+  Pin,
+  Phone,
+  Check,
+  X,
+  Clock,
+  Loader2,
+  CheckCircle2,
+  Send,
+  Sparkles,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { ForumThread } from '@/types'
 import BlurReveal from '@/components/BlurReveal'
 import ConsultationChatModal from '@/components/ConsultationChatModal'
+import { useAuth } from '@/lib/authContext'
+import { getMyAdvisorProfile, type AdvisorDto } from '@/lib/advisor'
 import {
   getAdvisorConsultations,
   updateConsultationStatus,
   type ConsultationDto,
 } from '@/lib/consultations'
-
-const stats = [
-  { label: 'Lượt xem trường', value: '12,450', icon: Eye, change: '+18%' },
-  { label: 'Yêu cầu tư vấn', value: '24', icon: MessageCircle, change: '+5' },
-  { label: 'Học sinh quan tâm', value: '3,200', icon: Users, change: '+12%' },
-  { label: 'Bài đăng forum', value: '8', icon: BarChart3, change: '+2' },
-]
-
-const pinnedPosts: ForumThread[] = [
-  { id: 'p1', title: 'THÔNG BÁO: Lịch tư vấn trực tiếp tháng 7/2025', author: 'Tư vấn viên NEU', avatar: '', category: 'Thông báo', replies: 12, views: 890, lastReply: '1 ngày trước', isPinned: true, isAdvicer: true },
-  { id: 'p2', title: 'Cập nhật điểm chuẩn 2025 - Các ngành hot', author: 'Tư vấn viên FTU', avatar: '', category: 'Thông báo', replies: 34, views: 2100, lastReply: '2 ngày trước', isPinned: true, isAdvicer: true },
-]
+import {
+  getForumThreads,
+  getForumCategories,
+  createForumThread,
+  type ForumThreadDto,
+  type ForumCategory,
+  formatForumDate,
+} from '@/lib/forum'
 
 export default function AdvisorDashboardPage() {
+  const { user } = useAuth()
+
+  // Dynamic state
+  const [advisorProfile, setAdvisorProfile] = useState<AdvisorDto | null>(null)
   const [requestsList, setRequestsList] = useState<ConsultationDto[]>([])
+  const [forumThreads, setForumThreads] = useState<ForumThreadDto[]>([])
+  const [categories, setCategories] = useState<ForumCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'pending' | 'accepted' | 'all'>('pending')
-  const [announcementText, setAnnouncementText] = useState('')
+
+  // Quick announcement state
+  const [announcementTitle, setAnnouncementTitle] = useState('')
+  const [announcementContent, setAnnouncementContent] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [isPinnedAnnouncement, setIsPinnedAnnouncement] = useState(true)
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false)
+  const [announcementMsg, setAnnouncementMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Chat modal state
   const [chatConsultationId, setChatConsultationId] = useState<string | null>(null)
   const [isChatOpen, setIsChatOpen] = useState(false)
 
-  const fetchRequests = async () => {
+  const fetchData = async () => {
     setLoading(true)
     try {
-      const data = await getAdvisorConsultations()
-      setRequestsList(data)
+      const [profileData, requestsData, threadsData, categoriesData] = await Promise.allSettled([
+        getMyAdvisorProfile(),
+        getAdvisorConsultations(),
+        getForumThreads(),
+        getForumCategories(),
+      ])
+
+      if (profileData.status === 'fulfilled' && profileData.value) {
+        setAdvisorProfile(profileData.value)
+      }
+      if (requestsData.status === 'fulfilled') {
+        setRequestsList(requestsData.value || [])
+      }
+      if (threadsData.status === 'fulfilled') {
+        setForumThreads(threadsData.value || [])
+      }
+      if (categoriesData.status === 'fulfilled' && categoriesData.value) {
+        setCategories(categoriesData.value)
+        if (categoriesData.value.length > 0) {
+          setSelectedCategory(categoriesData.value[0].id)
+        }
+      }
       setError('')
     } catch (err: any) {
-      console.warn('Could not load advisor consultations from API:', err)
+      console.warn('Could not load advisor dashboard data:', err)
       setError(err instanceof Error ? err.message : 'Không thể kết nối máy chủ')
     } finally {
       setLoading(false)
@@ -51,7 +96,7 @@ export default function AdvisorDashboardPage() {
   }
 
   useEffect(() => {
-    fetchRequests()
+    fetchData()
   }, [])
 
   const handleStatusChange = async (id: string, newStatus: 'ACCEPTED' | 'REJECTED' | 'COMPLETED') => {
@@ -63,10 +108,56 @@ export default function AdvisorDashboardPage() {
     }
   }
 
+  const handlePostAnnouncement = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!announcementTitle.trim()) {
+      setAnnouncementMsg({ type: 'error', text: 'Vui lòng nhập tiêu đề thông báo' })
+      return
+    }
+    if (!announcementContent.trim()) {
+      setAnnouncementMsg({ type: 'error', text: 'Vui lòng nhập nội dung thông báo' })
+      return
+    }
+    if (!selectedCategory && categories.length > 0) {
+      setSelectedCategory(categories[0].id)
+    }
+
+    setPostingAnnouncement(true)
+    setAnnouncementMsg(null)
+    try {
+      const catId = selectedCategory || (categories[0]?.id ?? '')
+      const newThread = await createForumThread({
+        categoryId: catId,
+        title: announcementTitle.trim(),
+        content: announcementContent.trim(),
+        isPinned: isPinnedAnnouncement,
+      })
+
+      setForumThreads((prev) => [newThread, ...prev])
+      setAnnouncementTitle('')
+      setAnnouncementContent('')
+      setAnnouncementMsg({ type: 'success', text: 'Đã đăng thông báo lên forum!' })
+      setTimeout(() => setAnnouncementMsg(null), 3000)
+    } catch (err: any) {
+      setAnnouncementMsg({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Lỗi khi đăng thông báo',
+      })
+    } finally {
+      setPostingAnnouncement(false)
+    }
+  }
+
   const openChat = (id: string) => {
     setChatConsultationId(id)
     setIsChatOpen(true)
   }
+
+  // Dynamic calculations
+  const pendingRequests = requestsList.filter((r) => r.status === 'PENDING')
+  const acceptedRequests = requestsList.filter((r) => r.status === 'ACCEPTED')
+  const completedRequests = requestsList.filter((r) => r.status === 'COMPLETED')
+  const uniqueStudentsCount = new Set(requestsList.map((r) => r.studentId).filter(Boolean)).size
 
   const filteredRequests = requestsList.filter((r) => {
     if (activeTab === 'pending') return r.status === 'PENDING'
@@ -74,27 +165,80 @@ export default function AdvisorDashboardPage() {
     return true
   })
 
+  // Filter pinned or advisor announcement posts
+  const pinnedPosts = forumThreads.filter((t) => t.isPinned || t.isAdvicer).slice(0, 5)
+  const displayPosts = pinnedPosts.length > 0 ? pinnedPosts : forumThreads.slice(0, 5)
+
+  // Advisor display values
+  const displayName = advisorProfile?.name || user?.name || 'Tư vấn viên'
+  const displayUniversity = advisorProfile?.universityName || 'Cố vấn tuyển sinh'
+  const displayTitle = advisorProfile?.title || 'Tư vấn viên chính thức'
+  const isVerified = advisorProfile?.verified ?? false
+
+  const stats = [
+    {
+      label: 'Yêu cầu tư vấn',
+      value: requestsList.length.toString(),
+      icon: MessageCircle,
+      change: `${pendingRequests.length} mới`,
+      isPositive: pendingRequests.length > 0,
+    },
+    {
+      label: 'Đã tiếp nhận & hoàn thành',
+      value: (acceptedRequests.length + completedRequests.length).toString(),
+      icon: CheckCircle2,
+      change: `+${completedRequests.length} xong`,
+      isPositive: true,
+    },
+    {
+      label: 'Học sinh kết nối',
+      value: uniqueStudentsCount.toString(),
+      icon: Users,
+      change: `${uniqueStudentsCount} em`,
+      isPositive: true,
+    },
+    {
+      label: 'Bài thảo luận Forum',
+      value: forumThreads.length.toString(),
+      icon: BarChart3,
+      change: `${forumThreads.filter((t) => t.isAdvicer).length} bài tư vấn`,
+      isPositive: true,
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-cream-100 pb-16">
       {/* Header */}
       <header className="bg-navy-800 text-cream-100 py-6 px-8 shadow-sm">
         <BlurReveal as="div" className="max-w-7xl mx-auto flex items-center justify-between" duration={700}>
           <div>
-            <h1 className="font-display text-2xl font-bold">Trang tư vấn viên</h1>
-            <p className="text-cream-200 text-sm mt-1">Đại học Kinh tế Quốc dân</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl font-bold">Trang tư vấn viên</h1>
+              {isVerified && (
+                <Badge variant="gold" size="sm" className="hidden sm:inline-flex">
+                  <Sparkles className="w-3 h-3 mr-1" /> Verified Advisor
+                </Badge>
+              )}
+            </div>
+            <p className="text-cream-200 text-sm mt-1">{displayUniversity}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Avatar name="Tư vấn viên NEU" size="md" />
+            <Avatar name={displayName} size="md" />
             <div>
-              <p className="text-sm font-medium">TS. Nguyễn Văn A</p>
-              <p className="text-xs text-cream-200">Tư vấn viên chính thức</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-white">{displayName}</p>
+                <Badge variant={isVerified ? 'success' : 'warning'} size="sm">
+                  {isVerified ? 'Đã xác minh' : 'Chờ xác minh'}
+                </Badge>
+              </div>
+              <p className="text-xs text-cream-200">{displayTitle}</p>
             </div>
           </div>
         </BlurReveal>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
+        {/* Dynamic Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, idx) => {
             const Icon = stat.icon
@@ -106,7 +250,13 @@ export default function AdvisorDashboardPage() {
                       <div className="w-10 h-10 bg-gold-500/15 rounded-xl flex items-center justify-center">
                         <Icon className="w-5 h-5 text-gold-600" />
                       </div>
-                      <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          stat.isPositive
+                            ? 'text-green-600 bg-green-50'
+                            : 'text-slate-500 bg-slate-100'
+                        }`}
+                      >
                         {stat.change}
                       </span>
                     </div>
@@ -120,15 +270,14 @@ export default function AdvisorDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Consultation requests */}
+          {/* Consultation requests list */}
           <div className="lg:col-span-2 space-y-4">
             <BlurReveal duration={600} delay={520}>
               <Card>
                 <CardHeader>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <CardTitle>
-                      Yêu cầu tư vấn (
-                      {requestsList.filter((r) => r.status === 'PENDING').length} mới)
+                      Yêu cầu tư vấn ({pendingRequests.length} mới)
                     </CardTitle>
                     {/* Status Tabs */}
                     <div className="flex bg-cream-100 p-1 rounded-xl border border-cream-200 text-xs">
@@ -140,7 +289,7 @@ export default function AdvisorDashboardPage() {
                             : 'text-slate-600 hover:text-navy-800'
                         }`}
                       >
-                        Chờ xử lý ({requestsList.filter((r) => r.status === 'PENDING').length})
+                        Chờ xử lý ({pendingRequests.length})
                       </button>
                       <button
                         onClick={() => setActiveTab('accepted')}
@@ -150,7 +299,7 @@ export default function AdvisorDashboardPage() {
                             : 'text-slate-600 hover:text-navy-800'
                         }`}
                       >
-                        Đã tiếp nhận ({requestsList.filter((r) => r.status === 'ACCEPTED').length})
+                        Đã tiếp nhận ({acceptedRequests.length})
                       </button>
                       <button
                         onClick={() => setActiveTab('all')}
@@ -310,62 +459,164 @@ export default function AdvisorDashboardPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Pinned announcements */}
+            {/* Pinned / Announcement posts */}
             <BlurReveal duration={600} delay={620}>
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Pin className="w-4 h-4 text-gold-600" />
-                    <CardTitle>Bài đã ghim</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Pin className="w-4 h-4 text-gold-600" />
+                      <CardTitle>Bài viết & Thông báo</CardTitle>
+                    </div>
+                    <Link to="/cong-dong" className="text-xs font-semibold text-gold-600 hover:underline">
+                      Xem tất cả
+                    </Link>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-cream-200">
-                    {pinnedPosts.map((post) => (
-                      <div key={post.id} className="p-4">
-                        <Badge variant="gold" size="sm" className="mb-2">
-                          {post.category}
-                        </Badge>
-                        <p className="text-sm font-medium text-navy-800 mb-1">{post.title}</p>
-                        <div className="flex items-center gap-3 text-xs text-slate-400 mt-2">
-                          <span className="flex items-center gap-1">
-                            <Eye className="w-3 h-3" />
-                            {post.views}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" />
-                            {post.replies}
-                          </span>
+                  {displayPosts.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-400">
+                      Chưa có thông báo nào được ghim.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-cream-200">
+                      {displayPosts.map((post) => (
+                        <div key={post.id} className="p-4 hover:bg-cream-50/60 transition-colors">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <Badge variant={post.isPinned ? 'gold' : 'navy'} size="sm">
+                              {post.categoryName || 'Thông báo'}
+                            </Badge>
+                            {post.isPinned && (
+                              <span className="text-[11px] font-medium text-gold-700 bg-gold-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Pin className="w-3 h-3 text-gold-600" /> Đã ghim
+                              </span>
+                            )}
+                          </div>
+                          <Link
+                            to={`/cong-dong/${post.id}`}
+                            className="text-sm font-semibold text-navy-800 hover:text-gold-600 transition-colors line-clamp-2 block mb-1"
+                          >
+                            {post.title}
+                          </Link>
+                          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+                            <span className="truncate max-w-[120px]">
+                              {post.authorName || 'Tư vấn viên'}
+                            </span>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                {post.viewsCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MessageCircle className="w-3 h-3" />
+                                {post.replyCount}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-4">
-                    <Button variant="outline" className="w-full" size="sm">
-                      <Pin className="w-3 h-3" /> Ghim bài mới
-                    </Button>
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </BlurReveal>
 
-            {/* Quick announcement */}
+            {/* Quick announcement form */}
             <BlurReveal duration={600} delay={720}>
               <Card>
                 <CardHeader>
                   <CardTitle>Đăng thông báo nhanh</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <textarea
-                    value={announcementText}
-                    onChange={(e) => setAnnouncementText(e.target.value)}
-                    placeholder="Nhập nội dung thông báo..."
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl border border-cream-200 focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none text-sm"
-                  />
-                  <Button variant="primary" className="w-full" size="sm">
-                    <Pin className="w-3 h-3" /> Đăng lên forum
-                  </Button>
+                <CardContent>
+                  <form onSubmit={handlePostAnnouncement} className="space-y-3">
+                    {announcementMsg && (
+                      <div
+                        className={`p-2.5 rounded-xl text-xs font-medium ${
+                          announcementMsg.type === 'success'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}
+                      >
+                        {announcementMsg.text}
+                      </div>
+                    )}
+
+                    {categories.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Chuyên mục
+                        </label>
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-white text-xs text-navy-800 focus:outline-none focus:ring-2 focus:ring-gold-400"
+                        >
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Tiêu đề thông báo
+                      </label>
+                      <input
+                        type="text"
+                        value={announcementTitle}
+                        onChange={(e) => setAnnouncementTitle(e.target.value)}
+                        placeholder="VD: THÔNG BÁO: Lịch tư vấn trực tiếp tuần này"
+                        className="w-full px-3.5 py-2 rounded-xl border border-cream-200 text-xs text-navy-800 focus:outline-none focus:ring-2 focus:ring-gold-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Nội dung thông báo
+                      </label>
+                      <textarea
+                        value={announcementContent}
+                        onChange={(e) => setAnnouncementContent(e.target.value)}
+                        placeholder="Nhập chi tiết nội dung thông báo cho học sinh..."
+                        rows={3}
+                        className="w-full px-3.5 py-2 rounded-xl border border-cream-200 text-xs text-navy-800 focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="pinCheck"
+                        checked={isPinnedAnnouncement}
+                        onChange={(e) => setIsPinnedAnnouncement(e.target.checked)}
+                        className="rounded text-gold-600 focus:ring-gold-400 accent-gold-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <label htmlFor="pinCheck" className="text-xs font-medium text-navy-800 cursor-pointer flex items-center gap-1">
+                        <Pin className="w-3 h-3 text-gold-600" /> Ghim bài viết này lên đầu
+                      </label>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-full mt-2"
+                      size="sm"
+                      disabled={postingAnnouncement}
+                    >
+                      {postingAnnouncement ? (
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang đăng...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <Send className="w-3.5 h-3.5" /> Đăng lên forum
+                        </span>
+                      )}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </BlurReveal>

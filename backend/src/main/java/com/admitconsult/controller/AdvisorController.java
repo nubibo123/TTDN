@@ -17,9 +17,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/advisors")
 @RequiredArgsConstructor
+@Transactional
 public class AdvisorController {
 
     private final AdvisorRepository advisorRepository;
@@ -63,6 +66,32 @@ public class AdvisorController {
         return ResponseEntity.ok(ApiResponse.success(toResponse(savedAdvisor, user, false)));
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<java.util.List<AdvisorResponse>>> getAll(
+            @RequestParam(required = false) String universityId) {
+        java.util.List<Advisor> advisors;
+        if (universityId != null && !universityId.isBlank()) {
+            String resolvedUniId = universityRepository.findById(universityId)
+                    .or(() -> universityRepository.findByCode(universityId))
+                    .map(University::getId)
+                    .orElse(universityId);
+            advisors = advisorRepository.findByUniversityId(resolvedUniId);
+        } else {
+            advisors = advisorRepository.findAll();
+        }
+
+        java.util.List<AdvisorResponse> dtos = advisors.stream().map(a -> {
+            User u = a.getUser();
+            if (u == null && a.getUserId() != null) {
+                u = userRepository.findById(a.getUserId()).orElse(null);
+            }
+            boolean verified = u != null && isVerified(u.getId());
+            return toResponse(a, u != null ? u : User.builder().name("Tư vấn viên").email("").build(), verified);
+        }).toList();
+
+        return ResponseEntity.ok(ApiResponse.success(dtos));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<AdvisorResponse>> me(@AuthenticationPrincipal UserPrincipal principal) {
         User user = userRepository.findById(principal.getId()).orElse(null);
@@ -87,16 +116,22 @@ public class AdvisorController {
         }
         Advisor advisor = advisorRepository.findByUserId(user.getId()).orElse(null);
         if (advisor == null) {
-            return ResponseEntity.notFound().build();
-        }
-        if (request.getUniversityId() != null && !request.getUniversityId().isBlank()) {
-            advisor.setUniversityId(request.getUniversityId());
-        }
-        if (request.getTitle() != null) {
-            advisor.setTitle(request.getTitle());
-        }
-        if (request.getBio() != null) {
-            advisor.setBio(request.getBio());
+            advisor = Advisor.builder()
+                    .userId(user.getId())
+                    .universityId(request.getUniversityId())
+                    .title(request.getTitle() != null ? request.getTitle() : "Tư vấn viên")
+                    .bio(request.getBio())
+                    .build();
+        } else {
+            if (request.getUniversityId() != null && !request.getUniversityId().isBlank()) {
+                advisor.setUniversityId(request.getUniversityId());
+            }
+            if (request.getTitle() != null) {
+                advisor.setTitle(request.getTitle());
+            }
+            if (request.getBio() != null) {
+                advisor.setBio(request.getBio());
+            }
         }
         Advisor saved = advisorRepository.save(advisor);
         boolean verified = isVerified(user.getId());

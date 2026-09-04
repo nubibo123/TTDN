@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface AdvisorRepository extends JpaRepository<Advisor, String> {
     Optional<Advisor> findByUserId(String userId);
+    java.util.List<Advisor> findByUniversityId(String universityId);
 }

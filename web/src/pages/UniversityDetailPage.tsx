@@ -31,27 +31,54 @@ export default function UniversityDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    let active = true
     setLoading(true)
     setError(false)
-    Promise.all([
-      getUniversityById(id),
-      getMajors(id),
-      getAdmissionScores(undefined, undefined, id),
-      getSavedUniversityIds(),
-    ]).then(([u, ms, allScores, savedIds]) => {
-      setUni(u)
-      setMajors(ms)
-      setIsSaved(savedIds.includes(id))
-      const grouped: Record<string, AdmissionScore[]> = {}
-      for (const s of allScores) {
-        if (!grouped[s.majorId]) grouped[s.majorId] = []
-        grouped[s.majorId].push(s)
-      }
-      setScores(grouped)
-    }).catch((err) => {
-      console.error('UniversityDetailPage error:', err)
-      setError(true)
-    }).finally(() => setLoading(false))
+
+    getUniversityById(id)
+      .then(async (u) => {
+        if (!active) return
+        if (!u) {
+          setError(true)
+          return
+        }
+        setUni(u)
+
+        const realId = u.id
+
+        const [msResult, scoresResult, savedIdsResult] = await Promise.allSettled([
+          getMajors(realId),
+          getAdmissionScores(undefined, undefined, realId),
+          getSavedUniversityIds(),
+        ])
+
+        if (!active) return
+
+        const ms = msResult.status === 'fulfilled' ? msResult.value : []
+        const allScores = scoresResult.status === 'fulfilled' ? scoresResult.value : []
+        const savedIds = savedIdsResult.status === 'fulfilled' ? savedIdsResult.value : []
+
+        setMajors(ms)
+        setIsSaved(savedIds.includes(realId) || savedIds.includes(id))
+
+        const grouped: Record<string, AdmissionScore[]> = {}
+        for (const s of allScores) {
+          if (!grouped[s.majorId]) grouped[s.majorId] = []
+          grouped[s.majorId].push(s)
+        }
+        setScores(grouped)
+      })
+      .catch((err) => {
+        console.error('UniversityDetailPage error:', err)
+        if (active) setError(true)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [id])
 
   const handleToggleSave = async () => {

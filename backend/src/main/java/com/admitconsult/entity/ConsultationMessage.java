@@ -36,11 +36,12 @@ public class ConsultationMessage {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "consultation_id", insertable = false, updatable = false)
     private Consultation consultation;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sender_id", insertable = false, updatable = false)
     private User sender;
 }

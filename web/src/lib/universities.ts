@@ -53,7 +53,11 @@ export async function getUniversities(): Promise<University[]> {
 }
 
 export async function getUniversityById(id: string): Promise<University> {
-  return fetchApi<University>(`/universities/${id}`)
+  try {
+    return await fetchApi<University>(`/universities/${id}`)
+  } catch {
+    return await fetchApi<University>(`/universities/code/${id}`)
+  }
 }
 
 export async function getUniversityByCode(code: string): Promise<University> {

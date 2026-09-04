@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/forum-posts")
 @RequiredArgsConstructor
+@Transactional
 public class ForumPostController {
 
     private final ForumPostRepository forumPostRepository;

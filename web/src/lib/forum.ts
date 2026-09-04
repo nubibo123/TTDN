@@ -55,6 +55,7 @@ export interface CreateThreadRequest {
   categoryId: string
   title: string
   content: string
+  isPinned?: boolean
 }
 
 export interface CreatePostRequest {

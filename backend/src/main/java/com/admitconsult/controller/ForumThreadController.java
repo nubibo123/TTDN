@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/forum-threads")
 @RequiredArgsConstructor
+@Transactional
 public class ForumThreadController {
 
     private final ForumThreadRepository forumThreadRepository;
@@ -128,13 +131,15 @@ public class ForumThreadController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Chủ đề không hợp lệ"));
         }
 
+        boolean isPinned = Boolean.TRUE.equals(request.getIsPinned());
+
         ForumThread thread = ForumThread.builder()
                 .authorId(principal.getId())
                 .categoryId(request.getCategoryId())
                 .title(request.getTitle().trim())
                 .content(request.getContent().trim())
                 .viewsCount(0)
-                .isPinned(false)
+                .isPinned(isPinned)
                 .isLocked(false)
                 .build();
         ForumThread saved = forumThreadRepository.save(thread);
@@ -182,6 +187,7 @@ public class ForumThreadController {
         private String categoryId;
         private String title;
         private String content;
+        private Boolean isPinned;
     }
 
     @lombok.Data

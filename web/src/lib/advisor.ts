@@ -21,6 +21,11 @@ export async function getMyAdvisorProfile(): Promise<AdvisorDto | null> {
   return fetchApi<AdvisorDto | null>('/advisors/me')
 }
 
+export async function getAdvisors(universityId?: string): Promise<AdvisorDto[]> {
+  const query = universityId ? `?universityId=${encodeURIComponent(universityId)}` : ''
+  return fetchApi<AdvisorDto[]>(`/advisors${query}`)
+}
+
 export async function updateMyAdvisorProfile(data: UpdateAdvisorRequest): Promise<AdvisorDto> {
   return putApi<AdvisorDto>('/advisors/me', data)
 }

@@ -51,14 +51,15 @@ public class Consultation {
     @Builder.Default
     private ConsultationStatus status = ConsultationStatus.PENDING;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "student_id", insertable = false, updatable = false)
     private User student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "advisor_id", insertable = false, updatable = false)
     private Advisor advisor;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "consultation", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<ConsultationMessage> messages = new HashSet<>();

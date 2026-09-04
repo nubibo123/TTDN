@@ -30,6 +30,7 @@ public class UniversityController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UniversityDto>> getById(@PathVariable String id) {
         return universityRepository.findById(id)
+                .or(() -> universityRepository.findByCode(id))
                 .map(u -> ResponseEntity.ok(ApiResponse.success(toDto(u))))
                 .orElseGet(() -> ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy trường")));
     }
