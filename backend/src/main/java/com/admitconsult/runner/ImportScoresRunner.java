@@ -1,6 +1,7 @@
 package com.admitconsult.runner;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  *         mvn spring-boot:run -Dspring-boot.run.profiles=import
  */
 @Component
+@Profile("import")
 public class ImportScoresRunner implements CommandLineRunner {
 
     @Override

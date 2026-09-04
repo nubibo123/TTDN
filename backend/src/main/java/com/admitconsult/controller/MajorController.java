@@ -6,6 +6,7 @@ import com.admitconsult.entity.Major;
 import com.admitconsult.repository.MajorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/majors")
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MajorController {
 
     private final MajorRepository majorRepository;

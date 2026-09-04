@@ -123,8 +123,7 @@ public class AdvisorController {
                 universityName,
                 advisor.getTitle(),
                 advisor.getBio(),
-                verified
-        );
+                verified);
     }
 
     @lombok.Data

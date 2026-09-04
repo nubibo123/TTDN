@@ -125,6 +125,25 @@ export default function MainLayout() {
                           <Shield className="w-4 h-4 text-gold-600" />
                           Quản trị
                         </Link>
+                      ) : roles.includes('ADVISOR') ? (
+                        <>
+                          <Link
+                            to="/tu-van-vien"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-navy-800 hover:bg-cream-100 transition-colors font-medium"
+                          >
+                            <MessageCircle className="w-4 h-4 text-gold-600" />
+                            Trang tư vấn
+                          </Link>
+                          <Link
+                            to="/ho-so"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-navy-800 hover:bg-cream-100 transition-colors"
+                          >
+                            <UserCircle className="w-4 h-4 text-slate-400" />
+                            Hồ sơ tư vấn viên
+                          </Link>
+                        </>
                       ) : (
                         <Link
                           to="/ho-so"
@@ -229,6 +248,23 @@ export default function MainLayout() {
                         >
                           <Shield className="w-4 h-4" /> Quản trị
                         </Link>
+                      ) : roles.includes('ADVISOR') ? (
+                        <>
+                          <Link
+                            to="/tu-van-vien"
+                            onClick={() => setMobileOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-cream-100 hover:bg-white/10 rounded-xl transition-colors font-medium text-gold-400"
+                          >
+                            <MessageCircle className="w-4 h-4" /> Trang tư vấn
+                          </Link>
+                          <Link
+                            to="/ho-so"
+                            onClick={() => setMobileOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-cream-100 hover:bg-white/10 rounded-xl transition-colors"
+                          >
+                            <UserCircle className="w-4 h-4" /> Hồ sơ tư vấn viên
+                          </Link>
+                        </>
                       ) : (
                         <Link
                           to="/ho-so"

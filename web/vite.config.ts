@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/ocr-proxy': {
-        target: 'https://de9f-35-231-229-14.ngrok-free.app/',
+        target: 'https://3055-34-57-130-62.ngrok-free.app',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ocr-proxy/, ''),
         headers: { 'ngrok-skip-browser-warning': 'true' },

@@ -44,6 +44,7 @@ export default function App() {
           <Route path="/ho-so"       element={<PageShell><ProfilePage /></PageShell>} />
         </Route>
         <Route path="/tu-van-vien" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
+        <Route path="/advisor/dashboard" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
         <Route path="/quan-tri"    element={<PageShell><AdminDashboardPage /></PageShell>} />
       </Routes>
     </Suspense>

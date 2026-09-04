@@ -34,11 +34,6 @@ interface UniversityLite {
   type: string
 }
 
-interface ExpandedMajors {
-  likely: MatchResult[]
-  unlikely: MatchResult[]
-}
-
 export default function ScoreComparisonPage() {
 const [scoreInput, setScoreInput] = useState<Record<string, string>>({
   math: '', physics: '', chemistry: '', literature: '', english: '',
@@ -56,7 +51,7 @@ const [showGroupModal, setShowGroupModal] = useState(false)
 const [groupSearchQuery, setGroupSearchQuery] = useState('')
 const [searchQuery, setSearchQuery] = useState('')
 const [majorSearchQuery, setMajorSearchQuery] = useState('')
-const [expandedUni, setExpandedUni] = useState<ExpandedMajors | null>(null)
+const [expandedUniId, setExpandedUniId] = useState<string | null>(null)
   const UNIS_PER_PAGE = 5
 
   const EMPTY_SCORES: Record<string, string> = {
@@ -332,7 +327,7 @@ const removeFromCompare = (id: string) => {
         })
       )
     }
-    return list.sort((a, b) => a.localeCompare(b, 'vi')).slice(0, 20)
+    return list.sort((a, b) => a.localeCompare(b, 'vi'))
   }, [compareList, matchResults, onlyShowScoredMajors])
 
   const LikelihoodIcon = ({ score, target }: { score: number; target: number }) => {
@@ -342,11 +337,8 @@ const removeFromCompare = (id: string) => {
   }
 
   const handleExpand = (uniId: string) => {
-    const results = matchResults.filter((r) => r.universityId === uniId)
-    const sorted = [...results].sort((a, b) => a.cutoffScore - b.cutoffScore)
-    const likely = sorted.filter((r) => totalScore >= r.cutoffScore)
-    const unlikely = sorted.filter((r) => totalScore < r.cutoffScore)
-    setExpandedUni({ likely, unlikely })
+    setMajorSearchQuery('')
+    setExpandedUniId((prev) => (prev === uniId ? null : uniId))
   }
 
   if (!initialLoadDone) {
@@ -517,8 +509,7 @@ const removeFromCompare = (id: string) => {
 
         {/* Right: Results Box with Tabs */}
         <div className="lg:col-span-2 space-y-6">
-          <BlurReveal duration={600} delay={300}>
-            <Card className="overflow-hidden">
+          <Card className="overflow-hidden">
               <CardHeader className="pb-4 border-b border-cream-200 bg-cream-50/50">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   {/* Tab Switcher Pills */}
@@ -605,8 +596,7 @@ const removeFromCompare = (id: string) => {
                           .map((uni) => {
                             const results = matchResults.filter((r) => r.universityId === uni.id)
                             const sorted = [...results].sort((a, b) => a.cutoffScore - b.cutoffScore)
-                            const isExpanded = expandedUni?.likely.some((r) => r.universityId === uni.id) ||
-                              expandedUni?.unlikely.some((r) => r.universityId === uni.id)
+                            const isExpanded = expandedUniId === uni.id
                             const isSelectedForCompare = compareList.some((c) => c.universityId === uni.id)
 
                             const likely = sorted.filter((r) => totalScore >= r.cutoffScore)
@@ -626,13 +616,7 @@ const removeFromCompare = (id: string) => {
                               >
                                 <div className="p-4 flex items-start justify-between gap-3">
                                   <button
-                                    onClick={() => {
-                                      if (isExpanded) {
-                                        setExpandedUni(null)
-                                      } else {
-                                        handleExpand(uni.id)
-                                      }
-                                    }}
+                                    onClick={() => handleExpand(uni.id)}
                                     className="flex-1 text-left flex items-start justify-between cursor-pointer"
                                   >
                                     <div className="flex-1">
@@ -937,7 +921,6 @@ const removeFromCompare = (id: string) => {
                 )}
               </CardContent>
             </Card>
-          </BlurReveal>
         </div>
       </div>
     </div>
