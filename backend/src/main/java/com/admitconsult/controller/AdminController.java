@@ -67,7 +67,7 @@ public class AdminController {
                 .filter(r -> r.getRole() == UserRoleRecord.UserRole.STUDENT).count();
         long totalUniversities = universityRepository.count();
         long totalConsultations = consultationRepository.count();
-        long totalPosts = forumPostRepository.count();
+        long totalPosts = forumThreadRepository.count();
         long pendingAdvisors = advisorRepository.findAll().stream()
                 .filter(this::isAdvisorPending)
                 .count();
@@ -274,13 +274,22 @@ public class AdminController {
     @DeleteMapping("/forum-posts/{id}")
     public ResponseEntity<ApiResponse<String>> deleteForumPost(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable String id) {
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean banAuthor) {
         assertAdmin(principal);
-        ForumPost post = forumPostRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Post not found"));
+        ForumPost post = forumPostRepository.findById(id).orElse(null);
+        if (post == null) return ResponseEntity.notFound().build();
+        if (banAuthor) {
+            if (post.getAuthorId().equals(principal.getId())) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Không thể tự khóa tài khoản của bạn."));
+            }
+            User author = userRepository.findById(post.getAuthorId()).orElseThrow();
+            author.setIsActive(false);
+            userRepository.save(author);
+        }
         post.setIsDeleted(true);
         forumPostRepository.save(post);
-        return ResponseEntity.ok(ApiResponse.success("Deleted"));
+        return ResponseEntity.ok(ApiResponse.success(banAuthor ? "Đã xóa bình luận và khóa tài khoản." : "Đã xóa bình luận."));
     }
 
     // ── Forum Threads ──
@@ -304,11 +313,23 @@ public class AdminController {
     @DeleteMapping("/forum-threads/{id}")
     public ResponseEntity<ApiResponse<String>> deleteForumThread(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable String id) {
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean banAuthor) {
         assertAdmin(principal);
+        ForumThread thread = forumThreadRepository.findById(id).orElse(null);
+        if (thread == null) return ResponseEntity.notFound().build();
+        if (banAuthor) {
+            if (thread.getAuthorId().equals(principal.getId())) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Không thể tự khóa tài khoản của bạn."));
+            }
+            User author = userRepository.findById(thread.getAuthorId()).orElseThrow();
+            author.setIsActive(false);
+            userRepository.save(author);
+        }
+        // The controller transaction commits deletion and account suspension together.
         threadLikeRepository.deleteByThreadId(id);
-        forumThreadRepository.deleteById(id);
-        return ResponseEntity.ok(ApiResponse.success("Deleted"));
+        forumThreadRepository.delete(thread);
+        return ResponseEntity.ok(ApiResponse.success(banAuthor ? "Đã xóa bài và khóa tài khoản." : "Đã xóa bài."));
     }
 
     // ── Forum Categories ──

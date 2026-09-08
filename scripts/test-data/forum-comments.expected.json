@@ -1,0 +1,62 @@
+[
+  {
+    "id": "c4dbae46-4a4a-4c97-992d-eba1c745af6d",
+    "expected": "off_topic",
+    "content": "Tối nay ăn lẩu ở đâu ngon? Mình muốn tìm quán có chỗ đậu xe."
+  },
+  {
+    "id": "3a8b0f76-b48c-4114-8ab0-b734afadb9c4",
+    "expected": "off_topic",
+    "content": "Có ai xem trận bóng hôm qua không, bàn thắng cuối đẹp quá!"
+  },
+  {
+    "id": "2ab5e3bd-b41e-4137-81aa-6863dd4da4e3",
+    "expected": "spam",
+    "content": "Bán điện thoại giá sốc, mua hai tặng một, nhắn tin để chốt đơn ngay!"
+  },
+  {
+    "id": "af0c5df6-8b2d-4b0c-aa95-fa55bd2639ac",
+    "expected": "spam",
+    "content": "Bỏ học đi, vào nhóm đầu tư của mình, cam kết nhân đôi tiền sau một tuần!"
+  },
+  {
+    "id": "c1ae0711-48d0-4dc2-99e1-1433c161354a",
+    "expected": "abusive",
+    "content": "Mày ngu thế, có mỗi việc chọn ngành cũng không biết. Đừng hỏi nữa."
+  },
+  {
+    "id": "629faa0d-4e09-438b-9d0a-00dfc89df441",
+    "expected": "abusive",
+    "content": "Tư vấn như cứt, không biết gì thì cút đi, đừng làm người khác chọn sai trường."
+  },
+  {
+    "id": "035fb6a3-b46f-49f9-80da-3cd3c328de86",
+    "expected": "abusive",
+    "content": "May ngu vl, deo biet gi thi im di, dung len day sua nua."
+  },
+  {
+    "id": "eddeb8fe-101d-4b66-bcf3-f6f9abe7c2d9",
+    "expected": "abusive",
+    "content": "Điểm thấp thế thì mày là đồ vô dụng, chẳng làm được gì đâu."
+  },
+  {
+    "id": "23ba6abd-309b-4aa3-8e63-cbaf8109efe0",
+    "expected": "allow",
+    "content": "Bạn nên xem điểm chuẩn các năm và học phí trước khi xếp nguyện vọng nhé."
+  },
+  {
+    "id": "0b308da8-bb25-462b-9823-59487623a507",
+    "expected": "allow",
+    "content": "Mình chưa đồng ý với lời tư vấn này vì chưa xét điều kiện tài chính của gia đình."
+  },
+  {
+    "id": "1ab0fb96-b3eb-4608-ad59-6a962cdb064c",
+    "expected": "allow",
+    "content": "Có người gọi mình là \"đồ ngu\" khi hỏi chọn ngành. Nhờ quản trị viên hướng dẫn cách báo cáo bình luận đó."
+  },
+  {
+    "id": "68f9f338-a424-4165-a6ee-8eb2d23a66dc",
+    "expected": "allow",
+    "content": "Học bổng năm nhất có yêu cầu chứng chỉ ngoại ngữ không ạ?"
+  }
+]

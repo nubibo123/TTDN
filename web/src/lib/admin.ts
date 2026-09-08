@@ -82,8 +82,8 @@ export async function getAdminForumPosts(): Promise<AdminForumPost[]> {
   return fetchApi<AdminForumPost[]>('/admin/forum-posts')
 }
 
-export async function deleteAdminForumPost(id: string): Promise<string> {
-  return deleteApi<string>(`/admin/forum-posts/${id}`)
+export async function deleteAdminForumPost(id: string, banAuthor = false): Promise<string> {
+  return deleteApi<string>(`/admin/forum-posts/${encodeURIComponent(id)}${banAuthor ? "?banAuthor=true" : ""}`)
 }
 
 export async function getPendingAdvisors(): Promise<AdminAdvisor[]> {
@@ -195,4 +195,8 @@ export async function createAdminUser(data: AdminCreateUserRequest): Promise<Adm
 /** Activate / deactivate a user account. */
 export async function updateAdminUserStatus(userId: string, isActive: boolean): Promise<AdminUser> {
   return putApi<AdminUser>(`/admin/users/${userId}/status`, { isActive })
+}
+
+export async function moderateAdminComment(id: string): Promise<import('./forumThreadService').ModerationResult> {
+  return postApi(`/admin/forum-posts/${encodeURIComponent(id)}/moderate`, {})
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GraduationCap, Plus, LoaderCircle, Globe, MapPin, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { GraduationCap, Plus, LoaderCircle, Globe, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { universityService, type University } from '@/lib/universityService';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -227,7 +227,6 @@ export default function UniversityAdminPage() {
                 <th className="px-4 py-3.5">Mã</th>
                 <th className="px-4 py-3.5">Khu vực</th>
                 <th className="px-4 py-3.5">Loại hình</th>
-                <th className="px-4 py-3.5">Trạng thái</th>
                 <th className="px-4 py-3.5">Website</th>
                 <th className="px-4 py-3.5 text-right">Thao tác</th>
               </tr>
@@ -238,7 +237,7 @@ export default function UniversityAdminPage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-cream-100">
-                    {Array.from({ length: 7 }).map((__, j) => (
+                    {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-4 py-4">
                         <div className="skeleton h-4 w-24" />
                       </td>
@@ -247,7 +246,7 @@ export default function UniversityAdminPage() {
                 ))
               ) : universities.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <AdminEmptyState
                       description={keyword ? 'Không tìm thấy trường phù hợp với bộ lọc.' : 'Chưa có trường nào trong hệ thống.'}
                       action={
@@ -279,13 +278,6 @@ export default function UniversityAdminPage() {
                     </td>
                     <td className="px-4 py-4"><RegionBadge region={uni.region} /></td>
                     <td className="px-4 py-4"><TypeBadge type={uni.type} /></td>
-                    <td className="px-4 py-4">
-                      {uni.isVerified ? (
-                        <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> Đã xác minh</Badge>
-                      ) : (
-                        <Badge variant="warning">Chưa xác minh</Badge>
-                      )}
-                    </td>
                     <td className="px-4 py-4">
                       {uni.websiteUrl ? (
                         <a

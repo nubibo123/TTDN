@@ -1,4 +1,4 @@
-import { fetchApi, putApi, deleteApi } from '@/lib/api';
+import { fetchApi, postApi, putApi, deleteApi } from '@/lib/api';
 
 export interface ForumThread {
     id?: string;
@@ -15,6 +15,12 @@ export interface ForumThread {
     replyCount?: number;
 }
 
+export interface ModerationResult {
+    label: 'allow' | 'off_topic' | 'spam' | 'abusive' | 'needs_review';
+    reason: string;
+    model: string;
+}
+
 export interface UpdateThreadRequest {
     title?: string;
     content?: string;
@@ -24,6 +30,10 @@ export interface UpdateThreadRequest {
 }
 
 export const forumThreadService = {
+    moderateThread: async (id: string): Promise<ModerationResult> => {
+        return postApi<ModerationResult>(`/admin/forum-threads/${encodeURIComponent(id)}/moderate`, {});
+    },
+
     getAllThreads: async (categoryId?: string): Promise<ForumThread[]> => {
         const qs = categoryId ? `?categoryId=${categoryId}` : '';
         return fetchApi<ForumThread[]>(`/forum-threads${qs}`);
@@ -37,7 +47,7 @@ export const forumThreadService = {
         return putApi<ForumThread>(`/admin/forum-threads/${id}`, data);
     },
 
-    deleteThread: async (id: string): Promise<string> => {
-        return deleteApi<string>(`/admin/forum-threads/${id}`);
+    deleteThread: async (id: string, banAuthor = false): Promise<string> => {
+        return deleteApi<string>(`/admin/forum-threads/${encodeURIComponent(id)}${banAuthor ? "?banAuthor=true" : ""}`);
     },
 };

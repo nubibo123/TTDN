@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { List, RefreshCw, Eye, Pin, Lock, Pencil, Trash2 } from 'lucide-react';
-import { forumThreadService, type ForumThread } from '@/lib/forumThreadService';
+import { forumThreadService, type ForumThread, type ModerationResult } from '@/lib/forumThreadService';
 import { forumCategoryService, type ForumCategory } from '@/lib/forumCategoryService';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -22,6 +22,26 @@ export default function ForumThreadAdminPage() {
   const [keyword, setKeyword] = useState('');
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+
+  const [aiResult, setAiResult] = useState<ModerationResult | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const aiRequest = useRef(0);
+  const aiLabels = { allow: 'Hợp lệ', off_topic: 'Lạc chủ đề', spam: 'Quảng cáo / spam', abusive: 'Xúc phạm', needs_review: 'Cần kiểm tra thủ công' };
+
+  const checkAI = async () => {
+    if (!viewing?.id || aiBusy) return;
+    const request = ++aiRequest.current;
+    setAiBusy(true);
+    setAiResult(null);
+    try {
+      const result = await forumThreadService.moderateThread(viewing.id);
+      if (request === aiRequest.current) setAiResult(result);
+    } catch (error) {
+      if (request === aiRequest.current) toast.error('Không kiểm tra được AI', error instanceof Error ? error.message : 'Vui lòng thử lại.');
+    } finally {
+      if (request === aiRequest.current) setAiBusy(false);
+    }
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [viewing, setViewing] = useState<ForumThread | null>(null);
@@ -71,6 +91,9 @@ export default function ForumThreadAdminPage() {
   };
 
   const openView = (thread: ForumThread) => {
+    aiRequest.current++;
+    setAiResult(null);
+    setAiBusy(false);
     setViewing(thread);
     setModalOpen(true);
   };
@@ -278,6 +301,18 @@ export default function ForumThreadAdminPage() {
               <p className="mt-1 whitespace-pre-wrap rounded-xl bg-cream-50 p-4 text-slate-700">
                 {viewing.content || <span className="text-slate-300">Không có nội dung</span>}
               </p>
+            </div>
+            <div className="space-y-3 rounded-xl border border-cream-200 p-4" aria-live="polite">
+              <Button type="button" variant="outline" disabled={aiBusy} onClick={checkAI}>
+                {aiBusy ? 'Đang kiểm tra…' : 'Kiểm tra AI'}
+              </Button>
+              <p className="text-xs text-slate-500">AI đưa ra gợi ý để quản trị viên xem xét. Kết quả hiển thị trong lần xem này.</p>
+              {aiResult && <div>
+                <Badge variant={aiResult.label === 'allow' ? 'success' : aiResult.label === 'needs_review' ? 'default' : 'danger'}>
+                  {aiLabels[aiResult.label]}
+                </Badge>
+                <p className="mt-2 whitespace-pre-wrap">{aiResult.reason}</p>
+              </div>}
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div><span className="font-medium text-navy-800">ID:</span> {viewing.id}</div>
