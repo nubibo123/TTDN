@@ -12,6 +12,7 @@ import {
   getForumThreads,
   createForumThread,
   toggleThreadLike,
+  setForumThreadPinned,
   formatForumDate,
   type ForumCategory,
   type ForumThreadDto,
@@ -34,6 +35,8 @@ export default function ForumPage() {
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [likePendingId, setLikePendingId] = useState<string | null>(null)
+  const [pinPendingId, setPinPendingId] = useState<string | null>(null)
+  const [pinError, setPinError] = useState('')
 
   useEffect(() => {
     getForumCategories()
@@ -114,6 +117,22 @@ export default function ForumPage() {
     }
   }
 
+  const handlePin = async (thread: ForumThreadDto, e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user || pinPendingId === thread.id) return
+    setPinPendingId(thread.id)
+    setPinError('')
+    try {
+      const updated = await setForumThreadPinned(thread.id, !thread.isPinned)
+      setThreads((prev) => prev.map((item) => item.id === updated.id ? updated : item))
+    } catch (err) {
+      setPinError(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái ghim')
+    } finally {
+      setPinPendingId(null)
+    }
+  }
+
   const activeCategory = categories.find((c) => c.id === activeCategoryId) ?? null
 
   const filteredThreads = threads.filter((t) => {
@@ -185,6 +204,11 @@ export default function ForumPage() {
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-cream-200 bg-white text-navy-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
+          {pinError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {pinError}
+            </div>
+          )}
 
           {loading ? (
             <div className="py-16 text-center text-slate-400">
@@ -205,6 +229,9 @@ export default function ForumPage() {
                         likedByMe={thread.likedByMe}
                         likePending={likePendingId === thread.id}
                         onLike={(e) => handleLike(thread, e)}
+                        canPin={Boolean(user)}
+                        pinPending={pinPendingId === thread.id}
+                        onPin={(e) => handlePin(thread, e)}
                       />
                     </BlurReveal>
                   ))}
@@ -219,6 +246,9 @@ export default function ForumPage() {
                       likedByMe={thread.likedByMe}
                       likePending={likePendingId === thread.id}
                       onLike={(e) => handleLike(thread, e)}
+                      canPin={Boolean(user)}
+                      pinPending={pinPendingId === thread.id}
+                      onPin={(e) => handlePin(thread, e)}
                     />
                   </BlurReveal>
                 ))}
@@ -304,18 +334,35 @@ function ThreadCard({
   likedByMe,
   likePending,
   onLike,
+  canPin,
+  pinPending,
+  onPin,
 }: {
   thread: ForumThreadDto
   likedByMe: boolean
   likePending: boolean
   onLike: (e: MouseEvent) => void
+  canPin: boolean
+  pinPending: boolean
+  onPin: (e: MouseEvent) => void
 }) {
   return (
     <Link to={`/cong-dong/${thread.id}`}>
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
-            <Avatar name={thread.authorName || 'A'} size="md" />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.location.href = `/ho-so/${thread.authorId}`
+              }}
+              aria-label={`Xem hồ sơ ${thread.authorName || 'người dùng'}`}
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
+            >
+              <Avatar name={thread.authorName || 'A'} size="md" />
+            </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <Badge variant={thread.isPinned ? 'gold' : 'default'} size="sm">
@@ -330,13 +377,40 @@ function ThreadCard({
                 {thread.title}
               </h3>
               <div className="flex items-center gap-4 text-xs text-slate-400">
-                <span className="font-medium text-slate-600">{thread.authorName || 'Ẩn danh'}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    window.location.href = `/ho-so/${thread.authorId}`
+                  }}
+                  className="font-medium text-slate-600 hover:text-gold-600 hover:underline"
+                >
+                  {thread.authorName || 'Ẩn danh'}
+                </button>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatForumDate(thread.createdAt)}</span>
                 <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{thread.replyCount}</span>
                 <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{thread.viewsCount}</span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              {canPin && (
+                <button
+                  type="button"
+                  disabled={pinPending}
+                  onClick={onPin}
+                  aria-label={thread.isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}
+                  title={thread.isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 border transition-all ${
+                    thread.isPinned
+                      ? 'text-gold-700 border-gold-200 bg-gold-50'
+                      : 'text-slate-400 border-slate-200 hover:text-gold-700 hover:border-gold-200 hover:bg-gold-50'
+                  } ${pinPending ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Pin className={`w-3.5 h-3.5 ${thread.isPinned ? 'fill-current' : ''}`} />
+                  {thread.isPinned ? 'Bỏ ghim' : 'Ghim'}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={likePending}

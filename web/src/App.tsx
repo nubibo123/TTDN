@@ -13,6 +13,7 @@ const MajorAdvicePage      = lazy(() => import('./pages/MajorAdvicePage'))
 const ForumPage            = lazy(() => import('./pages/ForumPage'))
 const ForumThreadPage      = lazy(() => import('./pages/ForumThreadPage'))
 const ProfilePage          = lazy(() => import('./pages/ProfilePage'))
+const PublicProfilePage    = lazy(() => import('./pages/PublicProfilePage'))
 const AdvisorDashboardPage = lazy(() => import('./pages/AdvisorDashboardPage'))
 const AdminDashboardPage   = lazy(() => import('./pages/AdminDashboardPage'))
 const LoginPage            = lazy(() => import('./pages/LoginPage'))
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/cong-dong"   element={<PageShell><ForumPage /></PageShell>} />
           <Route path="/cong-dong/:threadId" element={<PageShell><ForumThreadPage /></PageShell>} />
           <Route path="/ho-so"       element={<PageShell><ProfilePage /></PageShell>} />
+          <Route path="/ho-so/:userId" element={<PageShell><PublicProfilePage /></PageShell>} />
         </Route>
         <Route path="/tu-van-vien" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
         <Route path="/advisor/dashboard" element={<PageShell><AdvisorDashboardPage /></PageShell>} />

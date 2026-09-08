@@ -89,6 +89,13 @@ export async function createForumThread(data: CreateThreadRequest): Promise<Foru
   return postApi<ForumThreadDto>('/forum-threads', data)
 }
 
+export async function setForumThreadPinned(threadId: string, pinned: boolean): Promise<ForumThreadDto> {
+  return fetchApi<ForumThreadDto>(`/forum-threads/${threadId}/pin`, {
+    method: 'PATCH',
+    body: JSON.stringify({ pinned }),
+  })
+}
+
 export async function getForumPosts(threadId: string): Promise<ForumPostDto[]> {
   return fetchApi<ForumPostDto[]>(`/forum-posts?threadId=${encodeURIComponent(threadId)}`)
 }

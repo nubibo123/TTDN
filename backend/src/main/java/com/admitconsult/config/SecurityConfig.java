@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/advisors/register").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/advisors/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/profile/users/**").permitAll()
                 .requestMatchers("/api/match").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/universities/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/majors/**").permitAll()
@@ -96,7 +97,7 @@ public class SecurityConfig {
             "http://localhost:5174",
             "http://localhost:3000"
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 

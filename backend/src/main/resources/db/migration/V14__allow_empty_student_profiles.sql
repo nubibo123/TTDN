@@ -1,0 +1,2 @@
+ALTER TABLE student_profiles
+    ALTER COLUMN graduation_year DROP NOT NULL;

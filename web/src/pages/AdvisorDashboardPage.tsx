@@ -32,6 +32,7 @@ import {
   getForumThreads,
   getForumCategories,
   createForumThread,
+  setForumThreadPinned,
   type ForumThreadDto,
   type ForumCategory,
   formatForumDate,
@@ -145,6 +146,18 @@ export default function AdvisorDashboardPage() {
       })
     } finally {
       setPostingAnnouncement(false)
+    }
+  }
+
+  const handleTogglePin = async (post: ForumThreadDto) => {
+    try {
+      const updated = await setForumThreadPinned(post.id, !post.isPinned)
+      setForumThreads((prev) => prev.map((item) => item.id === updated.id ? updated : item))
+    } catch (err) {
+      setAnnouncementMsg({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Không thể cập nhật trạng thái ghim',
+      })
     }
   }
 
@@ -491,6 +504,13 @@ export default function AdvisorDashboardPage() {
                                 <Pin className="w-3 h-3 text-gold-600" /> Đã ghim
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePin(post)}
+                              className="text-[11px] font-medium text-slate-500 hover:text-gold-700"
+                            >
+                              {post.isPinned ? 'Bỏ ghim' : 'Ghim bài'}
+                            </button>
                           </div>
                           <Link
                             to={`/cong-dong/${post.id}`}

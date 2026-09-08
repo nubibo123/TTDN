@@ -39,7 +39,7 @@ import {
 type PrivacyKey = 'showGrades' | 'isProfilePublic' | 'allowContact' | 'showInForum'
 
 const PRIVACY_ITEMS: { key: PrivacyKey; label: string; desc: string }[] = [
-  { key: 'showGrades', label: 'Hiển thị điểm học bạ', desc: 'Cho phép tư vấn viên xem điểm của bạn' },
+  { key: 'showGrades', label: 'Hiển thị điểm học bạ', desc: 'Cho phép người khác xem điểm trung bình của bạn trên hồ sơ công khai' },
   { key: 'isProfilePublic', label: 'Hiển thị hồ sơ công khai', desc: 'Hồ sơ hiển thị với tư vấn viên và trường' },
   { key: 'allowContact', label: 'Cho phép liên hệ', desc: 'Tư vấn viên có thể chủ động liên hệ bạn' },
   { key: 'showInForum', label: 'Hiển thị trong forum', desc: 'Cho phép hiển thị tên khi tham gia thảo luận' },
@@ -96,6 +96,7 @@ export default function StudentProfilePage() {
 
   const [profile, setProfile] = useState<StudentProfileDto | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const [profileError, setProfileError] = useState('')
   const [savingPrivacy, setSavingPrivacy] = useState(false)
   const [privacySaveMsg, setPrivacySaveMsg] = useState('')
 
@@ -139,11 +140,15 @@ export default function StudentProfilePage() {
     if (!user) return
     let active = true
     setLoadingProfile(true)
+    setProfileError('')
     getMyStudentProfile()
       .then((data) => {
         if (active) setProfile(data)
       })
-      .catch((err) => console.warn('Could not fetch student profile:', err))
+      .catch((err) => {
+        console.warn('Could not fetch student profile:', err)
+        if (active) setProfileError(err instanceof Error ? err.message : 'Không thể tải hồ sơ')
+      })
       .finally(() => {
         if (active) setLoadingProfile(false)
       })
@@ -534,7 +539,7 @@ export default function StudentProfilePage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-400">Không thể tải cài đặt quyền riêng tư</p>
+                <p className="text-sm text-slate-400">{profileError || 'Không thể tải cài đặt quyền riêng tư'}</p>
               )}
             </CardContent>
           </Card>

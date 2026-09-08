@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/lib/authContext'
 import { getAuthMe } from '@/lib/admin'
 import { Loader2 } from 'lucide-react'
@@ -6,7 +7,7 @@ import StudentProfilePage from './StudentProfilePage'
 import AdvisorProfilePage from './AdvisorProfilePage'
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, initializing } = useAuth()
   const [roles, setRoles] = useState<string[] | null>(null)
 
   useEffect(() => {
@@ -26,6 +27,10 @@ export default function ProfilePage() {
       active = false
     }
   }, [user])
+
+  if (!initializing && !user) {
+    return <Navigate to="/dang-nhap" replace />
+  }
 
   if (roles === null) {
     return (

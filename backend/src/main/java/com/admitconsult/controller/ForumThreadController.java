@@ -132,6 +132,9 @@ public class ForumThreadController {
         }
 
         boolean isPinned = Boolean.TRUE.equals(request.getIsPinned());
+        if (isPinned && !canManagePins(principal.getId())) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Chỉ tư vấn viên hoặc quản trị viên mới được ghim bài viết"));
+        }
 
         ForumThread thread = ForumThread.builder()
                 .authorId(principal.getId())
@@ -146,10 +149,37 @@ public class ForumThreadController {
         return ResponseEntity.ok(ApiResponse.success(toDto(saved, principal.getId())));
     }
 
+    @PatchMapping("/{id}/pin")
+    public ResponseEntity<ApiResponse<ForumThreadDto>> updatePin(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String id,
+            @RequestBody PinThreadRequest request) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Authentication required"));
+        }
+        if (!canManagePins(principal.getId())) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Chỉ tư vấn viên hoặc quản trị viên mới được ghim bài viết"));
+        }
+
+        ForumThread thread = forumThreadRepository.findById(id).orElse(null);
+        if (thread == null) {
+            return ResponseEntity.notFound().build();
+        }
+        thread.setIsPinned(Boolean.TRUE.equals(request.getPinned()));
+        ForumThread saved = forumThreadRepository.save(thread);
+        return ResponseEntity.ok(ApiResponse.success(toDto(saved, principal.getId())));
+    }
+
     private boolean isVerifiedAdvisor(String userId) {
         return userRoleRecordRepository.findByUserId(userId).stream()
                 .filter(r -> r.getRole() == UserRoleRecord.UserRole.ADVISOR)
                 .anyMatch(r -> Boolean.TRUE.equals(r.getIsVerified()));
+    }
+
+    private boolean canManagePins(String userId) {
+        return userRoleRecordRepository.findByUserId(userId).stream()
+                .anyMatch(r -> r.getRole() == UserRoleRecord.UserRole.ADMIN
+                    || r.getRole() == UserRoleRecord.UserRole.ADVISOR);
     }
 
     private ForumThreadDto toDto(ForumThread t, String currentUserId) {
@@ -188,6 +218,11 @@ public class ForumThreadController {
         private String title;
         private String content;
         private Boolean isPinned;
+    }
+
+    @lombok.Data
+    public static class PinThreadRequest {
+        private Boolean pinned;
     }
 
     @lombok.Data

@@ -193,8 +193,21 @@ export default function ForumThreadPage() {
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-navy-800 leading-tight">{thread.title}</h1>
             <div className="flex items-center gap-4 mt-4 text-xs text-slate-400 flex-wrap">
               <span className="flex items-center gap-2">
-                <Avatar name={thread.authorName || 'A'} size="sm" />
-                <span className="font-medium text-slate-600">{thread.authorName || 'Ẩn danh'}</span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/ho-so/${thread.authorId}`)}
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
+                  aria-label={`Xem hồ sơ ${thread.authorName || 'người dùng'}`}
+                >
+                  <Avatar name={thread.authorName || 'A'} size="sm" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/ho-so/${thread.authorId}`)}
+                  className="font-medium text-slate-600 hover:text-gold-600 hover:underline"
+                >
+                  {thread.authorName || 'Ẩn danh'}
+                </button>
               </span>
               <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatForumDate(thread.createdAt)}</span>
               <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{thread.replyCount} phản hồi</span>
@@ -307,14 +320,30 @@ function PostCard({
   onReply: () => void
   compact?: boolean
 }) {
+  const navigate = useNavigate()
+  const openProfile = () => navigate(`/ho-so/${post.authorId}`)
+
   return (
     <Card className="hover:shadow-sm transition-shadow">
       <CardContent className={`${compact ? 'p-4' : 'p-5'}`}>
         <div className="flex items-start gap-3">
-          <Avatar name={post.authorName || 'A'} size={compact ? 'sm' : 'md'} />
+          <button
+            type="button"
+            onClick={openProfile}
+            aria-label={`Xem hồ sơ ${post.authorName || 'người dùng'}`}
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
+          >
+            <Avatar name={post.authorName || 'A'} size={compact ? 'sm' : 'md'} />
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`font-medium text-navy-800 ${compact ? 'text-sm' : ''}`}>{post.authorName || 'Ẩn danh'}</span>
+              <button
+                type="button"
+                onClick={openProfile}
+                className={`font-medium text-navy-800 hover:text-gold-600 hover:underline ${compact ? 'text-sm' : ''}`}
+              >
+                {post.authorName || 'Ẩn danh'}
+              </button>
               {post.isAdvicer && <Badge variant="navy" size="sm">Tư vấn viên</Badge>}
               {post.isOfficialReply && <Badge variant="success" size="sm">Phản hồi chính thức</Badge>}
               <span className="text-xs text-slate-400 ml-auto">{formatForumDate(post.createdAt)}</span>
