@@ -15,6 +15,6 @@ public class SystemSetting {
     @Id
     private String key;
 
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false, columnDefinition = "text")
     private String value;
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import PageShell from './layouts/PageShell'
 import PageSkeleton from './components/PageSkeleton'
@@ -17,6 +17,13 @@ const PublicProfilePage    = lazy(() => import('./pages/PublicProfilePage'))
 const AdvisorDashboardPage = lazy(() => import('./pages/AdvisorDashboardPage'))
 const AdminDashboardPage   = lazy(() => import('./pages/AdminDashboardPage'))
 const LoginPage            = lazy(() => import('./pages/LoginPage'))
+
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
+const UniversityAdminPage = lazy(() => import('./pages/admin/UniversityAdminPage'))
+const MajorAdminPage = lazy(() => import('./pages/admin/MajorAdminPage'))
+const AdmissionScoreAdminPage = lazy(() => import('./pages/admin/AdmissionScoreAdminPage'))
+const UserAdminPage = lazy(() => import('./pages/admin/UserAdminPage'))
+const ForumThreadAdminPage = lazy(() => import('./pages/admin/ForumThreadAdminPage'))
 
 function Fallback() {
   return (
@@ -47,7 +54,15 @@ export default function App() {
         </Route>
         <Route path="/tu-van-vien" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
         <Route path="/advisor/dashboard" element={<PageShell><AdvisorDashboardPage /></PageShell>} />
-        <Route path="/quan-tri"    element={<PageShell><AdminDashboardPage /></PageShell>} />
+        <Route path="/quan-tri" element={<Navigate to="/admin" replace />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="universities" element={<UniversityAdminPage />} />
+          <Route path="majors" element={<MajorAdminPage />} />
+          <Route path="scores" element={<AdmissionScoreAdminPage />} />
+          <Route path="users" element={<UserAdminPage />} />
+          <Route path="forum-threads" element={<ForumThreadAdminPage />} />
+        </Route>
       </Routes>
     </Suspense>
   )

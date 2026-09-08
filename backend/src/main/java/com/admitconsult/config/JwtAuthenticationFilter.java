@@ -34,6 +34,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String userId = jwtUtil.getUserIdFromToken(token);
                 var userDetails = userService.loadUserById(userId);
 
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Account is inactive\",\"data\":null}");
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

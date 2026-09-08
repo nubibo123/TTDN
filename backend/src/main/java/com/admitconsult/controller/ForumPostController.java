@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ForumPostController {
 
+
     private final ForumPostRepository forumPostRepository;
     private final ForumThreadRepository forumThreadRepository;
     private final PostLikeRepository postLikeRepository;

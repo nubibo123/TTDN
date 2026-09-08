@@ -1,6 +1,11 @@
 package com.admitconsult.controller;
 
 import com.admitconsult.dto.ApiResponse;
+import com.admitconsult.dto.UserCreateRequest;
+import com.admitconsult.dto.MajorDto;
+import jakarta.validation.Valid;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.admitconsult.dto.UserPrincipal;
 import com.admitconsult.entity.*;
 import com.admitconsult.repository.*;
@@ -16,8 +21,12 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@Transactional
 public class AdminController {
 
+    private final PasswordEncoder passwordEncoder;
+    private final MajorRepository majorRepository;
+    private final ThreadLikeRepository threadLikeRepository;
     private final UserRepository userRepository;
     private final UserRoleRecordRepository userRoleRecordRepository;
     private final ConsultationRepository consultationRepository;
@@ -31,6 +40,7 @@ public class AdminController {
     private final ForumCategoryRepository forumCategoryRepository;
 
     private void assertAdmin(UserPrincipal principal) {
+        if (principal == null) throw new org.springframework.security.access.AccessDeniedException("Admin only");
         boolean isAdmin = userRoleRecordRepository.findByUserId(principal.getId()).stream()
                 .anyMatch(r -> r.getRole() == UserRoleRecord.UserRole.ADMIN);
         if (!isAdmin) {
@@ -52,7 +62,9 @@ public class AdminController {
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<StatsResponse>> stats(@AuthenticationPrincipal UserPrincipal principal) {
         assertAdmin(principal);
-        long totalStudents = userRepository.count();
+        long totalUsers = userRepository.count();
+        long totalStudents = userRoleRecordRepository.findAll().stream()
+                .filter(r -> r.getRole() == UserRoleRecord.UserRole.STUDENT).count();
         long totalUniversities = universityRepository.count();
         long totalConsultations = consultationRepository.count();
         long totalPosts = forumPostRepository.count();
@@ -61,7 +73,8 @@ public class AdminController {
                 .count();
 
         StatsResponse res = new StatsResponse(
-                totalStudents, totalUniversities, totalConsultations, totalPosts, pendingAdvisors
+                totalStudents, totalUniversities, totalConsultations, totalPosts, pendingAdvisors,
+                totalUsers
         );
         return ResponseEntity.ok(ApiResponse.success(res));
     }
@@ -93,14 +106,20 @@ public class AdminController {
         assertAdmin(principal);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
-        user.getRoles().clear();
-        for (String roleName : request.getRoles()) {
-            UserRoleRecord.UserRole role = UserRoleRecord.UserRole.valueOf(roleName);
-            user.getRoles().add(UserRoleRecord.builder()
-                    .userId(user.getId())
-                    .role(role)
-                    .isVerified(role == UserRoleRecord.UserRole.ADVISOR || role == UserRoleRecord.UserRole.ADMIN)
-                    .build());
+        if (request.getRoles() == null || request.getRoles().isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("At least one role is required"));
+        }
+        Set<UserRoleRecord.UserRole> requested = request.getRoles().stream()
+                .map(UserRoleRecord.UserRole::valueOf).collect(Collectors.toSet());
+        if (userId.equals(principal.getId()) && !requested.contains(UserRoleRecord.UserRole.ADMIN)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Cannot remove your own admin role"));
+        }
+        user.getRoles().removeIf(r -> !requested.contains(r.getRole()));
+        for (UserRoleRecord.UserRole role : requested) {
+            if (user.getRoles().stream().noneMatch(r -> r.getRole() == role)) {
+                user.getRoles().add(UserRoleRecord.builder().userId(userId).user(user).role(role)
+                        .isVerified(role != UserRoleRecord.UserRole.STUDENT).build());
+            }
         }
         User saved = userRepository.save(user);
         List<String> roles = saved.getRoles().stream()
@@ -287,6 +306,7 @@ public class AdminController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable String id) {
         assertAdmin(principal);
+        threadLikeRepository.deleteByThreadId(id);
         forumThreadRepository.deleteById(id);
         return ResponseEntity.ok(ApiResponse.success("Deleted"));
     }
@@ -472,8 +492,9 @@ public class AdminController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody CreateAdmissionScoreRequest request) {
         assertAdmin(principal);
+        validateAdmissionScore(request);
         AdmissionScore score = AdmissionScore.builder()
-                .major(new Major() {{ setId(request.getMajorId()); }})
+                .major(majorRepository.findById(request.getMajorId()).orElseThrow(() -> new NoSuchElementException("Major not found")))
                 .year(request.getYear())
                 .method(request.getMethod() != null ? request.getMethod() : "Điểm thi THPT")
                 .score(request.getScore())
@@ -488,6 +509,214 @@ public class AdminController {
         )));
     }
 
+    /** Create a user (typically an ADVISOR) with a role + optional advisor profile. */
+    @PostMapping("/users")
+    public ApiResponse<CreatedAccount> createUser(@AuthenticationPrincipal UserPrincipal principal, @Valid @RequestBody UserCreateRequest req) {
+        assertAdmin(principal);
+        if (userRepository.existsByEmail(req.getEmail())) {
+            return ApiResponse.error("Email already in use");
+        }
+
+        UserRoleRecord.UserRole role = resolveRole(req.getRole());
+        if (role == null) {
+            return ApiResponse.error("Invalid role, must be one of: ADVISOR, ADMIN");
+        }
+
+        String universityId = (req.getUniversityId() != null) ? req.getUniversityId() : null;
+        if (role == UserRoleRecord.UserRole.ADVISOR && universityId == null) {
+            return ApiResponse.error("universityId is required for ADVISOR role");
+        }
+        if (universityId != null && universityRepository.findById(universityId).isEmpty()) {
+            return ApiResponse.error("University not found");
+        }
+
+        User user = User.builder()
+                .email(req.getEmail())
+                .passwordHash(passwordEncoder.encode(req.getPassword()))
+                                .name(req.getName())
+                .isActive(req.getIsActive() != null ? req.getIsActive() : true)
+                .build();
+        user = userRepository.save(user);
+
+        UserRoleRecord userRole = UserRoleRecord.builder()
+                .userId(user.getId())
+                .role(role)
+                .universityId(universityId)
+                .isVerified(true)
+                .bio(req.getBio())
+                .build();
+        userRole.setUser(user);
+        userRoleRecordRepository.save(userRole);
+
+        // Create the Advisor profile for advisor users
+        if (role == UserRoleRecord.UserRole.ADVISOR) {
+            Advisor advisor = Advisor.builder()
+                    .userId(user.getId())
+                    .universityId(universityId)
+                    .title((req.getTitle() == null || req.getTitle().isBlank()) ? "Tư vấn viên" : req.getTitle())
+                    .bio(req.getBio())
+                    .build();
+            advisorRepository.save(advisor);
+        }
+
+        List<String> roles = List.of(role.name());
+        CreatedAccount data = new CreatedAccount(null, user.getId(), user.getEmail(), user.getName(), roles);
+        return ApiResponse.success("Tạo tài khoản " + role.name().toLowerCase() + " thành công", data);
+    }
+
+    private UserRoleRecord.UserRole resolveRole(String role) {
+        if (role == null || role.isBlank()) return UserRoleRecord.UserRole.ADVISOR;
+        return switch (role.toUpperCase(java.util.Locale.ROOT)) {
+            case "ADMIN" -> UserRoleRecord.UserRole.ADMIN;
+            case "ADVISOR" -> UserRoleRecord.UserRole.ADVISOR;
+            default -> null;
+        };
+    }
+
+    public record CreatedAccount(String token, String userId, String email, String name, List<String> roles) {}
+
+    @PutMapping("/users/{userId}/status")
+    public ResponseEntity<ApiResponse<UserSummary>> updateUserStatus(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String userId,
+            @RequestBody ActiveStatusRequest request) {
+        assertAdmin(principal);
+        if (request.isActive == null) return ResponseEntity.badRequest().body(ApiResponse.error("isActive is required"));
+        if (userId.equals(principal.getId()) && !request.isActive)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Cannot lock your own account"));
+        User u = userRepository.findById(userId).orElseThrow(() -> new NoSuchElementException("User not found"));
+        u.setIsActive(request.isActive);
+        userRepository.save(u);
+        return ResponseEntity.ok(ApiResponse.success(new UserSummary(u.getId(), u.getName(), u.getEmail(),
+                u.getIsActive(), u.getRoles().stream().map(r -> r.getRole().name()).toList(), u.getCreatedAt())));
+    }
+
+    @DeleteMapping("/advisors/{id}")
+    public ResponseEntity<ApiResponse<String>> rejectAdvisor(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id) {
+        assertAdmin(principal);
+        Advisor advisor = advisorRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Advisor not found"));
+        if (!isAdvisorPending(advisor)) return ResponseEntity.badRequest().body(ApiResponse.error("Advisor is already verified"));
+        if (consultationRepository.findAll().stream().anyMatch(c -> id.equals(c.getAdvisorId())))
+            return ResponseEntity.badRequest().body(ApiResponse.error("Advisor already has consultations"));
+        User user = advisor.getUser();
+        user.getRoles().removeIf(r -> r.getRole() == UserRoleRecord.UserRole.ADVISOR);
+        user.setAdvisor(null);
+        userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Rejected"));
+    }
+
+    @PostMapping("/majors")
+    public ResponseEntity<ApiResponse<MajorDto>> createMajor(
+            @AuthenticationPrincipal UserPrincipal principal, @RequestBody MajorDto request) {
+        assertAdmin(principal);
+        Major major = new Major();
+        applyMajor(major, request);
+        return ResponseEntity.ok(ApiResponse.success(majorDto(majorRepository.save(major))));
+    }
+
+    @PutMapping("/majors/{id}")
+    public ResponseEntity<ApiResponse<MajorDto>> updateMajor(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id, @RequestBody MajorDto request) {
+        assertAdmin(principal);
+        Major major = majorRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Major not found"));
+        applyMajor(major, request);
+        return ResponseEntity.ok(ApiResponse.success(majorDto(majorRepository.save(major))));
+    }
+
+    private void applyMajor(Major major, MajorDto request) {
+        if (request.getCode() == null || request.getCode().isBlank() || request.getName() == null || request.getName().isBlank()
+                || request.getUniversityId() == null) throw new IllegalArgumentException("Code, name and university are required");
+        major.setUniversity(universityRepository.findById(request.getUniversityId())
+                .orElseThrow(() -> new NoSuchElementException("University not found")));
+        major.setCode(request.getCode().trim());
+        major.setName(request.getName().trim());
+        major.setSubjectGroup(request.getSubjectGroup());
+        major.setDescription(request.getDescription());
+        // Preserve fields that are owned by other screens and absent from the admin form.
+        if (request.getTuitionMin() != null) major.setTuitionMin(request.getTuitionMin());
+        if (request.getTuitionMax() != null) major.setTuitionMax(request.getTuitionMax());
+        if (request.getCareerPaths() != null) major.setCareerPaths(request.getCareerPaths());
+        if (request.getIsActive() != null) major.setIsActive(request.getIsActive());
+    }
+
+    private MajorDto majorDto(Major m) {
+        return new MajorDto(m.getId(), m.getUniversity().getId(), m.getUniversity().getName(), m.getCode(), m.getName(),
+                m.getSubjectGroup(), m.getDescription(), m.getTuitionMin(), m.getTuitionMax(), m.getCareerPaths(), m.getIsActive(),
+                m.getCategory() != null ? m.getCategory().getId() : null, m.getCategory() != null ? m.getCategory().getName() : null);
+    }
+
+    @DeleteMapping("/majors/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteMajor(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id) {
+        assertAdmin(principal);
+        Major major = majorRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Major not found"));
+        majorRepository.delete(major);
+        return ResponseEntity.ok(ApiResponse.success("Deleted"));
+    }
+
+    @PutMapping("/admission-scores/{id}")
+    public ResponseEntity<ApiResponse<AdmissionScoreSummary>> updateAdmissionScore(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id,
+            @RequestBody CreateAdmissionScoreRequest request) {
+        assertAdmin(principal);
+        AdmissionScore score = admissionScoreRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Admission score not found"));
+        validateAdmissionScore(request);
+        score.setMajor(majorRepository.findById(request.getMajorId()).orElseThrow(() -> new NoSuchElementException("Major not found")));
+        score.setYear(request.getYear());
+        score.setMethod(request.getMethod());
+        score.setScore(request.getScore());
+        score.setNote(request.getNote());
+        score.setUrl(request.getUrl());
+        AdmissionScore saved = admissionScoreRepository.save(score);
+        return ResponseEntity.ok(ApiResponse.success(new AdmissionScoreSummary(saved.getId(), saved.getMajor().getId(),
+                saved.getMajor().getName(), saved.getYear(), saved.getMethod(), saved.getScore(), saved.getNote(), saved.getUrl())));
+    }
+
+    private void validateAdmissionScore(CreateAdmissionScoreRequest request) {
+        if (request.getMajorId() == null || request.getYear() == null || request.getScore() == null)
+            throw new IllegalArgumentException("Major, year and score are required");
+    }
+
+    @DeleteMapping("/admission-scores/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteAdmissionScore(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id) {
+        assertAdmin(principal);
+        AdmissionScore score = admissionScoreRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Admission score not found"));
+        admissionScoreRepository.delete(score);
+        return ResponseEntity.ok(ApiResponse.success("Deleted"));
+    }
+
+    @PutMapping("/forum-threads/{id}")
+    public ResponseEntity<ApiResponse<ForumThreadSummary>> updateForumThread(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable String id, @RequestBody UpdateThreadRequest request) {
+        assertAdmin(principal);
+        ForumThread thread = forumThreadRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Thread not found"));
+        if (request.title != null && !request.title.isBlank()) thread.setTitle(request.title.trim());
+        if (request.content != null && !request.content.isBlank()) thread.setContent(request.content.trim());
+        if (request.categoryId != null) {
+            ForumCategory category = forumCategoryRepository.findById(request.categoryId)
+                    .orElseThrow(() -> new NoSuchElementException("Category not found"));
+            thread.setCategoryId(category.getId());
+            thread.setCategory(category);
+        }
+        if (request.isPinned != null) thread.setIsPinned(request.isPinned);
+        if (request.isLocked != null) thread.setIsLocked(request.isLocked);
+        forumThreadRepository.save(thread);
+        return ResponseEntity.ok(ApiResponse.success(new ForumThreadSummary(thread.getId(), thread.getCategoryId(),
+                thread.getCategory() != null ? thread.getCategory().getName() : null, thread.getTitle(), thread.getAuthorId(),
+                thread.getAuthor() != null ? thread.getAuthor().getName() : null, thread.getIsPinned(), thread.getIsLocked(), thread.getCreatedAt())));
+    }
+
+    public static class ActiveStatusRequest { public Boolean isActive; }
+    public static class UpdateThreadRequest {
+        public String title;
+        public String content;
+        public String categoryId;
+        public Boolean isPinned;
+        public Boolean isLocked;
+    }
+
     // ── DTOs ──
 
     @lombok.Data
@@ -498,6 +727,7 @@ public class AdminController {
         private long totalConsultations;
         private long totalPosts;
         private long pendingAdvisors;
+        private long totalUsers;
     }
 
     @lombok.Data

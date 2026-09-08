@@ -9,6 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface ThreadLikeRepository extends JpaRepository<ThreadLike, ThreadLike.ThreadLikeId> {
+    @Transactional
+    void deleteByThreadId(String threadId);
+
     Optional<ThreadLike> findByThreadIdAndUserId(String threadId, String userId);
 
     @Transactional
